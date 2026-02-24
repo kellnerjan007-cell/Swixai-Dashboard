@@ -1,0 +1,195 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum UserRole {
+  CUSTOMER
+  ADMIN
+}
+
+enum WorkspaceStatus {
+  ACTIVE
+  PAUSED
+  SUSPENDED
+}
+
+enum MemberRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum AssistantStatus {
+  ACTIVE
+  PAUSED
+  DRAFT
+}
+
+enum KnowledgeSourceType {
+  FAQ
+  FILE
+  TEXT
+}
+
+// ─── Models ───────────────────────────────────────────────────────────────────
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String?
+  role         UserRole @default(CUSTOMER)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  memberships Membership[]
+
+  @@map("users")
+}
+
+model Workspace {
+  id        String          @id @default(cuid())
+  name      String
+  slug      String          @unique
+  plan      String          @default("starter")
+  status    WorkspaceStatus @default(ACTIVE)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  members             Membership[]
+  assistants          Assistant[]
+  knowledgeSources    KnowledgeSource[]
+  calls               Call[]
+  calendarConnections CalendarConnection[]
+  billing             Billing?
+  webhookLogs         WebhookLog[]
+
+  @@map("workspaces")
+}
+
+model Membership {
+  id          String     @id @default(cuid())
+  userId      String
+  workspaceId String
+  role        MemberRole @default(MEMBER)
+  createdAt   DateTime   @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, workspaceId])
+  @@map("memberships")
+}
+
+model Assistant {
+  id            String          @id @default(cuid())
+  workspaceId   String
+  name          String
+  status        AssistantStatus @default(ACTIVE)
+  phoneNumber   String?
+  systemPrompt  String?
+  voice         String          @default("alloy")
+  language      String          @default("de")
+  businessHours Json?
+  fallbackRule  String          @default("voicemail")
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  workspace        Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  calls            Call[]
+  knowledgeSources KnowledgeSource[]
+
+  @@map("assistants")
+}
+
+model KnowledgeSource {
+  id          String              @id @default(cuid())
+  workspaceId String
+  assistantId String?
+  type        KnowledgeSourceType @default(TEXT)
+  title       String
+  contentText String?
+  fileUrl     String?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  workspace Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  assistant Assistant? @relation(fields: [assistantId], references: [id], onDelete: SetNull)
+
+  @@map("knowledge_sources")
+}
+
+model Call {
+  id                String    @id @default(cuid())
+  workspaceId       String
+  assistantId       String?
+  startedAt         DateTime
+  endedAt           DateTime?
+  durationSec       Int?
+  fromNumber        String?
+  toNumber          String?
+  outcome           String?
+  costTotal         Float?
+  costBreakdownJson Json?
+  recordingUrl      String?
+  transcriptText    String?
+  providerCallId    String?
+  tags              String[]  @default([])
+  intent            String?
+  bookingStatus     String?
+  createdAt         DateTime  @default(now())
+
+  workspace Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  assistant Assistant? @relation(fields: [assistantId], references: [id], onDelete: SetNull)
+
+  @@map("calls")
+}
+
+model CalendarConnection {
+  id           String   @id @default(cuid())
+  workspaceId  String
+  provider     String   @default("GOOGLE")
+  accessToken  String
+  refreshToken String?
+  calendarId   String?
+  connectedAt  DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@map("calendar_connections")
+}
+
+model Billing {
+  id             String   @id @default(cuid())
+  workspaceId    String   @unique
+  creditsBalance Float    @default(0)
+  currency       String   @default("EUR")
+  totalSpent     Float    @default(0)
+  updatedAt      DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@map("billing")
+}
+
+model WebhookLog {
+  id          String   @id @default(cuid())
+  workspaceId String?
+  provider    String
+  event       String?
+  payloadJson Json
+  status      String   @default("received")
+  error       String?
+  createdAt   DateTime @default(now())
+
+  workspace Workspace? @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+
+  @@map("webhook_logs")
+}
