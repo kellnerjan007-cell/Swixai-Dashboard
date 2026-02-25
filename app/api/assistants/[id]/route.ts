@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getUserWorkspace } from "@/lib/workspace";
 import { assistantSchema } from "@/lib/validations";
+import { updateVapiAssistant, deleteVapiAssistant } from "@/lib/vapi";
 
 async function getAssistantWithAuth(
   assistantId: string,
@@ -42,7 +43,7 @@ export async function PATCH(
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { ok, error, status } = await getAssistantWithAuth(id, session.user.id);
+  const { ok, assistant, error, status } = await getAssistantWithAuth(id, session.user.id);
   if (!ok) return NextResponse.json({ error }, { status });
 
   const body = await req.json();
@@ -56,6 +57,20 @@ export async function PATCH(
     data: parsed.data,
   });
 
+  // Sync update to Vapi
+  if (process.env.VAPI_API_KEY && assistant?.vapiAssistantId) {
+    try {
+      await updateVapiAssistant(assistant.vapiAssistantId, {
+        name: updated.name,
+        systemPrompt: updated.systemPrompt,
+        voice: updated.voice,
+        language: updated.language,
+      });
+    } catch (err) {
+      console.error("[VAPI] Failed to update assistant in Vapi:", err);
+    }
+  }
+
   return NextResponse.json(updated);
 }
 
@@ -67,8 +82,17 @@ export async function DELETE(
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { ok, error, status } = await getAssistantWithAuth(id, session.user.id);
+  const { ok, assistant, error, status } = await getAssistantWithAuth(id, session.user.id);
   if (!ok) return NextResponse.json({ error }, { status });
+
+  // Delete from Vapi first (before DB so we still have the vapiAssistantId)
+  if (process.env.VAPI_API_KEY && assistant?.vapiAssistantId) {
+    try {
+      await deleteVapiAssistant(assistant.vapiAssistantId);
+    } catch (err) {
+      console.error("[VAPI] Failed to delete assistant in Vapi:", err);
+    }
+  }
 
   await db.assistant.delete({ where: { id } });
 

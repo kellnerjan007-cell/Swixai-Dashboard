@@ -55,7 +55,7 @@ function NavItem({
 
 export function AdminSidebar() {
   return (
-    <aside className="w-64 min-h-screen bg-white border-r border-gray-100 flex flex-col">
+    <aside className="w-64 h-full bg-white border-r border-gray-100 flex flex-col flex-shrink-0">
       {/* Logo */}
       <div className="px-5 py-5 border-b border-gray-100">
         <div className="flex items-center gap-2.5">

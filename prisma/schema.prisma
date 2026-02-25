@@ -98,9 +98,10 @@ model Assistant {
   voice         String          @default("alloy")
   language      String          @default("de")
   businessHours Json?
-  fallbackRule  String          @default("voicemail")
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
+  fallbackRule    String          @default("voicemail")
+  vapiAssistantId String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
 
   workspace        Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   calls            Call[]
@@ -117,6 +118,7 @@ model KnowledgeSource {
   title       String
   contentText String?
   fileUrl     String?
+  fileName    String?
   createdAt   DateTime            @default(now())
   updatedAt   DateTime            @updatedAt
 
