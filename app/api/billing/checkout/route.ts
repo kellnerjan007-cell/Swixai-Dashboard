@@ -16,20 +16,17 @@ import { getUserWorkspace } from "@/lib/workspace";
 
 export const dynamic = "force-dynamic";
 
-const ALLOWED_AMOUNTS = [10, 25, 50, 100];
-
 export async function POST(req: NextRequest) {
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
   const session = await getServerSession(authOptions);
   if (!session) {
-    return NextResponse.redirect(new URL("/login", req.url));
+    return NextResponse.json({ error: "Nicht eingeloggt" }, { status: 401 });
   }
 
-  // Parse the form POST (amount comes from <input type="hidden" name="amount">)
-  const formData = await req.formData();
-  const amount = Number(formData.get("amount"));
+  const body = await req.json();
+  const amount = Math.floor(Number(body.amount));
 
-  if (!ALLOWED_AMOUNTS.includes(amount)) {
+  if (!amount || amount < 1 || amount > 10000) {
     return NextResponse.json({ error: "Ungültiger Betrag" }, { status: 400 });
   }
 
@@ -64,6 +61,5 @@ export async function POST(req: NextRequest) {
     cancel_url: `${baseUrl}/app/billing?canceled=1`,
   });
 
-  // 303 See Other: browser follows redirect after POST
-  return NextResponse.redirect(checkoutSession.url!, 303);
+  return NextResponse.json({ url: checkoutSession.url });
 }

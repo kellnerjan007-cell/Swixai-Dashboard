@@ -5,9 +5,9 @@ import { db } from "@/lib/db";
 import { Topbar } from "@/components/customer/Topbar";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/Button";
 import { formatCurrency } from "@/lib/utils";
 import { Zap, TrendingUp, AlertTriangle, CheckCircle, XCircle } from "lucide-react";
+import { TopUpCard } from "@/components/customer/TopUpCard";
 
 const usageItems = [
   { key: "STT", label: "Speech-to-Text", color: "bg-indigo-400", pct: 35 },
@@ -180,20 +180,7 @@ export default async function BillingPage({
               <p className="text-sm text-gray-500 mb-1">Guthaben aufladen</p>
               <p className="text-sm text-gray-600">Wähle einen Betrag</p>
             </div>
-            <div className="mt-4 space-y-2">
-              {[10, 25, 50, 100].map((amount) => (
-                <form key={amount} action="/api/billing/checkout" method="POST">
-                  <input type="hidden" name="amount" value={amount} />
-                  <Button variant="secondary" size="sm" className="w-full">
-                    + {formatCurrency(amount, currency)}
-                  </Button>
-                </form>
-              ))}
-              <p className="text-xs text-gray-400 text-center pt-1">
-                Powered by Stripe
-                {/* TODO: Implement Stripe Checkout in /api/billing/checkout */}
-              </p>
-            </div>
+            <TopUpCard currency={currency} />
           </Card>
         </div>
 
