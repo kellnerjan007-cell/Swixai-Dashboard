@@ -112,19 +112,42 @@ export async function POST(req: NextRequest) {
   try {
     // ── call-started ─────────────────────────────────────────────────────────
     if (message.type === "call-started" && vapiCallId && workspaceId) {
-      const existing = await db.call.findFirst({ where: { providerCallId: vapiCallId } });
-      if (!existing) {
-        await db.call.create({
-          data: {
+      // Block call if workspace has no credits
+      const billing = await db.billing.findUnique({ where: { workspaceId } });
+      if (billing && billing.creditsBalance <= 0) {
+        // End the call immediately via Vapi API
+        await fetch(`https://api.vapi.ai/call/${vapiCallId}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${process.env.VAPI_API_KEY}` },
+        });
+        await db.call.upsert({
+          where: { providerCallId: vapiCallId },
+          update: { outcome: "blocked-no-credits" },
+          create: {
             workspaceId,
             assistantId,
             providerCallId: vapiCallId,
             startedAt: call?.startedAt ? new Date(call.startedAt) : new Date(),
             fromNumber: call?.customer?.number,
             toNumber: call?.phoneNumber?.number,
-            outcome: "in-progress",
+            outcome: "blocked-no-credits",
           },
         });
+      } else {
+        const existing = await db.call.findFirst({ where: { providerCallId: vapiCallId } });
+        if (!existing) {
+          await db.call.create({
+            data: {
+              workspaceId,
+              assistantId,
+              providerCallId: vapiCallId,
+              startedAt: call?.startedAt ? new Date(call.startedAt) : new Date(),
+              fromNumber: call?.customer?.number,
+              toNumber: call?.phoneNumber?.number,
+              outcome: "in-progress",
+            },
+          });
+        }
       }
     }
 
