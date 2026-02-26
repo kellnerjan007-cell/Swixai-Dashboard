@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { getUserWorkspace } from "@/lib/workspace";
+import { getUserWorkspace, getOrCreateWorkspace } from "@/lib/workspace";
 import { assistantSchema } from "@/lib/validations";
 import { createVapiAssistant } from "@/lib/vapi";
 import type { ToolsConfig } from "@/lib/vapi";
@@ -27,8 +27,8 @@ export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const workspace = await getUserWorkspace(session.user.id);
-  if (!workspace) return NextResponse.json({ error: "No workspace" }, { status: 400 });
+  const workspace = await getOrCreateWorkspace(session.user.id);
+  if (!workspace) return NextResponse.json({ error: "Kein Benutzer gefunden" }, { status: 400 });
 
   const body = await req.json();
   const parsed = assistantSchema.safeParse(body);

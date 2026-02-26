@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { getUserWorkspace } from "@/lib/workspace";
+import { getOrCreateWorkspace } from "@/lib/workspace";
 import { assistantSchema } from "@/lib/validations";
 import { updateVapiAssistant, deleteVapiAssistant } from "@/lib/vapi";
 import type { ToolsConfig } from "@/lib/vapi";
@@ -11,8 +11,8 @@ async function getAssistantWithAuth(
   assistantId: string,
   userId: string
 ): Promise<{ ok: boolean; assistant?: Awaited<ReturnType<typeof db.assistant.findFirst>>; vapiKey?: string | null; error?: string; status?: number }> {
-  const workspace = await getUserWorkspace(userId);
-  if (!workspace) return { ok: false, error: "No workspace", status: 400 };
+  const workspace = await getOrCreateWorkspace(userId);
+  if (!workspace) return { ok: false, error: "Kein Benutzer gefunden", status: 400 };
 
   const assistant = await db.assistant.findFirst({
     where: { id: assistantId, workspaceId: workspace.id },
