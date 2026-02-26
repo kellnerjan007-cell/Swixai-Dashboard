@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { formatCurrency } from "@/lib/utils";
-import { Zap, TrendingUp, CreditCard, AlertTriangle } from "lucide-react";
+import { Zap, TrendingUp, AlertTriangle, CheckCircle, XCircle } from "lucide-react";
 
 const usageItems = [
   { key: "STT", label: "Speech-to-Text", color: "bg-indigo-400", pct: 35 },
@@ -16,9 +16,66 @@ const usageItems = [
   { key: "Telephony", label: "Telefonie", color: "bg-emerald-400", pct: 10 },
 ];
 
-export default async function BillingPage() {
+export default async function BillingPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ success?: string; canceled?: string; session_id?: string }>;
+}) {
   const session = await getServerSession(authOptions);
   if (!session) redirect("/login");
+
+  const params = await searchParams;
+  const paymentSuccess = params.success === "1";
+  const paymentCanceled = params.canceled === "1";
+  const stripeSessionId = params.session_id;
+
+  // Guthaben direkt verifizieren wenn User nach Stripe-Checkout zurückkommt
+  // (Webhook kann localhost nicht erreichen – das ist der Fallback)
+  if (paymentSuccess && stripeSessionId) {
+    try {
+      const Stripe = (await import("stripe")).default;
+      const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+      const checkout = await stripe.checkout.sessions.retrieve(stripeSessionId);
+
+      if (checkout.payment_status === "paid") {
+        const membership = await db.membership.findFirst({
+          where: { userId: session.user.id },
+          include: { workspace: true },
+          orderBy: { createdAt: "asc" },
+        });
+        const workspaceId = membership?.workspace?.id;
+        if (workspaceId && checkout.metadata?.workspaceId === workspaceId) {
+          const amount = Number(checkout.metadata?.amount);
+          const alreadyDone = await db.webhookLog.findFirst({
+            where: {
+              provider: "stripe",
+              status: "processed",
+              event: "checkout.session.completed",
+              payloadJson: { path: ["id"], equals: stripeSessionId },
+            },
+          });
+          if (!alreadyDone && amount) {
+            await db.billing.upsert({
+              where: { workspaceId },
+              update: { creditsBalance: { increment: amount } },
+              create: { workspaceId, creditsBalance: amount, totalSpent: 0, currency: "EUR" },
+            });
+            await db.webhookLog.create({
+              data: {
+                workspaceId,
+                provider: "stripe",
+                event: "checkout.session.completed",
+                payloadJson: { id: stripeSessionId, amount, source: "billing-page" },
+                status: "processed",
+              },
+            });
+          }
+        }
+      }
+    } catch {
+      // Stille Fehler – Webhook kann es ggf. noch nachtragen
+    }
+  }
 
   const membership = await db.membership.findFirst({
     where: { userId: session.user.id },
@@ -52,6 +109,32 @@ export default async function BillingPage() {
     <>
       <Topbar title="Billing & Credits" subtitle="Kontostand & Verbrauch" />
       <main className="flex-1 px-8 py-8 space-y-6">
+        {/* Payment success */}
+        {paymentSuccess && (
+          <div className="flex items-start gap-3 bg-emerald-50 border border-emerald-200 rounded-2xl px-5 py-4">
+            <CheckCircle className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-semibold text-emerald-800">Zahlung erfolgreich</p>
+              <p className="text-sm text-emerald-700">
+                Dein Guthaben wurde aufgeladen. Es kann einige Sekunden dauern, bis es sichtbar ist.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Payment canceled */}
+        {paymentCanceled && (
+          <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-2xl px-5 py-4">
+            <XCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-semibold text-red-800">Zahlung abgebrochen</p>
+              <p className="text-sm text-red-700">
+                Der Zahlungsvorgang wurde abgebrochen. Dein Guthaben wurde nicht verändert.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Low balance warning */}
         {lowBalance && (
           <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4">
@@ -150,19 +233,6 @@ export default async function BillingPage() {
           </div>
         </Card>
 
-        {/* Stripe TODO Notice */}
-        <div className="flex items-start gap-3 bg-gray-50 border border-gray-200 rounded-2xl px-5 py-4">
-          <CreditCard className="w-4 h-4 text-gray-500 flex-shrink-0 mt-0.5" />
-          <div>
-            <p className="text-sm font-semibold text-gray-700">Stripe Integration</p>
-            <p className="text-sm text-gray-500 mt-0.5">
-              TODO: Implementiere <code className="bg-gray-100 px-1 rounded text-xs">/api/billing/checkout</code> mit
-              Stripe Checkout Session. Setze <code className="bg-gray-100 px-1 rounded text-xs">STRIPE_SECRET_KEY</code> und{" "}
-              <code className="bg-gray-100 px-1 rounded text-xs">STRIPE_WEBHOOK_SECRET</code> in .env.
-              Webhook-Handler: <code className="bg-gray-100 px-1 rounded text-xs">/api/billing/webhook</code> → update creditsBalance.
-            </p>
-          </div>
-        </div>
       </main>
     </>
   );

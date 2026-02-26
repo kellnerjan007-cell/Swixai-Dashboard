@@ -9,9 +9,24 @@ import { Button } from "@/components/ui/Button";
 import { formatDate } from "@/lib/utils";
 import { CalendarDays, CheckCircle2, AlertCircle, ExternalLink, RefreshCw } from "lucide-react";
 
-export default async function CalendarPage() {
+const ERROR_MESSAGES: Record<string, string> = {
+  no_client_id: "Google Client ID ist nicht konfiguriert. Trage GOOGLE_CLIENT_ID in die .env ein.",
+  access_denied: "Google-Zugriff wurde verweigert.",
+  token_exchange: "Fehler beim Verbinden mit Google. Bitte erneut versuchen.",
+  no_workspace: "Kein Workspace gefunden.",
+};
+
+export default async function CalendarPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ success?: string; error?: string }>;
+}) {
   const session = await getServerSession(authOptions);
   if (!session) redirect("/login");
+
+  const params = await searchParams;
+  const connectSuccess = params.success === "1";
+  const connectError = params.error;
 
   const membership = await db.membership.findFirst({
     where: { userId: session.user.id },
@@ -41,6 +56,18 @@ export default async function CalendarPage() {
     <>
       <Topbar title="Google Kalender" subtitle="Kalender-Integration" />
       <main className="flex-1 px-8 py-8 space-y-6">
+        {connectSuccess && (
+          <div className="flex items-center gap-3 bg-emerald-50 border border-emerald-200 rounded-2xl px-5 py-4">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+            <p className="text-sm font-medium text-emerald-800">Google Kalender erfolgreich verbunden!</p>
+          </div>
+        )}
+        {connectError && (
+          <div className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-2xl px-5 py-4">
+            <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
+            <p className="text-sm text-red-700">{ERROR_MESSAGES[connectError] ?? connectError}</p>
+          </div>
+        )}
         {/* Connection Status */}
         <Card>
           <div className="flex items-start justify-between">

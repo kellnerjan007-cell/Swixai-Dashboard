@@ -55,13 +55,14 @@ model User {
 }
 
 model Workspace {
-  id        String          @id @default(cuid())
-  name      String
-  slug      String          @unique
-  plan      String          @default("starter")
-  status    WorkspaceStatus @default(ACTIVE)
-  createdAt DateTime        @default(now())
-  updatedAt DateTime        @updatedAt
+  id         String          @id @default(cuid())
+  name       String
+  slug       String          @unique
+  plan       String          @default("starter")
+  status     WorkspaceStatus @default(ACTIVE)
+  vapiApiKey String?
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
 
   members             Membership[]
   assistants          Assistant[]
@@ -100,6 +101,7 @@ model Assistant {
   businessHours Json?
   fallbackRule    String          @default("voicemail")
   vapiAssistantId String?
+  toolsConfig     Json?
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
 

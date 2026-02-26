@@ -135,6 +135,14 @@ export async function POST(req: NextRequest) {
         ? Math.round(message.durationSeconds)
         : undefined;
 
+      // Extract intent & booking status from Vapi analysis
+      const structured = message.analysis?.structuredData as Record<string, unknown> | undefined;
+      const intent = (structured?.intent as string | undefined) ?? null;
+      const successEval = message.analysis?.successEvaluation;
+      const bookingStatus =
+        (structured?.bookingStatus as string | undefined) ??
+        (successEval === "true" || successEval === "1" ? "booked" : null);
+
       const callData = {
         workspaceId,
         assistantId,
@@ -149,6 +157,8 @@ export async function POST(req: NextRequest) {
         costBreakdownJson: (message.costs ?? call?.costs ?? null) as Parameters<typeof db.call.create>[0]["data"]["costBreakdownJson"],
         recordingUrl: message.recordingUrl ?? message.stereoRecordingUrl,
         transcriptText: message.transcript,
+        intent,
+        bookingStatus,
       };
 
       const existing = await db.call.findFirst({ where: { providerCallId: vapiCallId } });
