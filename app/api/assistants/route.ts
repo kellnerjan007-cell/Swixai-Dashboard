@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { getUserWorkspace } from "@/lib/workspace";
 import { assistantSchema } from "@/lib/validations";
 import { createVapiAssistant } from "@/lib/vapi";
+import type { ToolsConfig } from "@/lib/vapi";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -46,15 +47,17 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  // 2. Sync to Vapi (non-blocking: if no API key or Vapi fails, dashboard still works)
-  if (process.env.VAPI_API_KEY) {
+  // 2. Sync to Vapi — skip if user already provided a vapiAssistantId
+  const vapiKey = workspace.vapiApiKey || process.env.VAPI_API_KEY;
+  if (vapiKey && !parsed.data.vapiAssistantId) {
     try {
       const vapiId = await createVapiAssistant({
         name: assistant.name,
         systemPrompt: assistant.systemPrompt,
         voice: assistant.voice,
         language: assistant.language,
-      });
+        toolsConfig: assistant.toolsConfig as ToolsConfig | null,
+      }, vapiKey);
       await db.assistant.update({
         where: { id: assistant.id },
         data: { vapiAssistantId: vapiId },

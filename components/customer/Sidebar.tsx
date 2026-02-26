@@ -11,6 +11,7 @@ import {
   BarChart3,
   CalendarDays,
   CreditCard,
+  Settings,
   LogOut,
   Mic,
   Shield,
@@ -34,6 +35,7 @@ const insightItems = [
 
 const settingsItems = [
   { href: "/app/billing", label: "Billing & Credits", icon: CreditCard },
+  { href: "/app/settings", label: "Einstellungen", icon: Settings },
 ];
 
 function NavItem({

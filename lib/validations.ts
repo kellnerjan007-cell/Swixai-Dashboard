@@ -20,6 +20,8 @@ export const assistantSchema = z.object({
   phoneNumber: z.string().optional(),
   fallbackRule: z.enum(["voicemail", "transfer", "hangup"]).default("voicemail"),
   status: z.enum(["ACTIVE", "PAUSED", "DRAFT"]).default("ACTIVE"),
+  vapiAssistantId: z.string().optional(),
+  toolsConfig: z.any().optional(),
 });
 
 export const knowledgeSourceSchema = z.object({
