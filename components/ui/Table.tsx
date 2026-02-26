@@ -1,3 +1,5 @@
+"use client";
+import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 interface TableProps {
@@ -47,18 +49,22 @@ export function Tbody({ children }: { children: React.ReactNode }) {
 export function Tr({
   children,
   onClick,
+  href,
   className,
 }: {
   children: React.ReactNode;
   onClick?: () => void;
+  href?: string;
   className?: string;
 }) {
+  const router = useRouter();
+  const handleClick = href ? () => router.push(href) : onClick;
   return (
     <tr
-      onClick={onClick}
+      onClick={handleClick}
       className={cn(
         "hover:bg-gray-50 transition",
-        onClick && "cursor-pointer",
+        handleClick && "cursor-pointer",
         className
       )}
     >

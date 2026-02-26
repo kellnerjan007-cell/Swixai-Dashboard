@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -76,8 +75,7 @@ export default async function CallsPage() {
               </Thead>
               <Tbody>
                 {calls.map((call) => (
-                  <Link key={call.id} href={`/app/calls/${call.id}`} legacyBehavior>
-                    <Tr onClick={() => {}}>
+                  <Tr key={call.id} href={`/app/calls/${call.id}`}>
                       <Td>
                         <span className="text-sm font-medium text-gray-900">
                           {formatDate(call.startedAt)}
@@ -119,8 +117,7 @@ export default async function CallsPage() {
                       <Td>
                         <ChevronRight className="w-4 h-4 text-gray-400" />
                       </Td>
-                    </Tr>
-                  </Link>
+                  </Tr>
                 ))}
               </Tbody>
             </Table>
