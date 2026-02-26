@@ -36,7 +36,7 @@ export async function getOrCreateWorkspace(userId: string) {
   const workspace = await db.$transaction(async (tx) => {
     const ws = await tx.workspace.create({ data: { name: baseName, slug } });
     await tx.membership.create({ data: { userId, workspaceId: ws.id, role: "OWNER" } });
-    await tx.billing.create({ data: { workspaceId: ws.id, creditsBalance: 10.0 } });
+    await tx.billing.create({ data: { workspaceId: ws.id, creditsBalance: 0 } });
     return ws;
   });
 

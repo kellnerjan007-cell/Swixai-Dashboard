@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
       });
 
       await tx.billing.create({
-        data: { workspaceId: workspace.id, creditsBalance: 10.0 },
+        data: { workspaceId: workspace.id, creditsBalance: 0 },
       });
 
       return { user, workspace };
