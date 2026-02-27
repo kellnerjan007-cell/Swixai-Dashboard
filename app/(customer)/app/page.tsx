@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { formatCurrency } from "@/lib/utils";
 import { PhoneCall, Clock, Euro, Zap, CheckCircle2, Activity } from "lucide-react";
+import { SetupGuide } from "@/components/customer/SetupGuide";
 
 export default async function CustomerHomePage() {
   const session = await getServerSession(authOptions);
@@ -98,6 +99,12 @@ export default async function CustomerHomePage() {
   const activeAssistants = assistants.filter((a) => a.status === "ACTIVE").length;
   const creditsBalance = billing?.creditsBalance ?? 0;
 
+  // Setup guide state
+  const vapiKeySet = !!workspace?.vapiApiKey;
+  const hasAssistant = assistants.length > 0;
+  const hasCredits = creditsBalance > 0;
+  const showSetupGuide = !vapiKeySet || !hasAssistant || !hasCredits;
+
   return (
     <>
       <Topbar
@@ -105,6 +112,43 @@ export default async function CustomerHomePage() {
         subtitle={`${now.toLocaleString("de-DE", { month: "long", year: "numeric" })}`}
       />
       <main className="flex-1 px-8 py-8 space-y-8">
+        {/* Onboarding guide — shown until all critical steps are done */}
+        {showSetupGuide && (
+          <SetupGuide
+            steps={[
+              {
+                title: "Vapi API Key hinterlegen",
+                description:
+                  "Verbinde deinen Vapi-Account, damit Anrufe, Kosten und Transkripte automatisch synchronisiert werden.",
+                href: "/app/settings",
+                done: vapiKeySet,
+              },
+              {
+                title: "Ersten Assistenten anlegen",
+                description:
+                  "Erstelle deinen ersten KI-Assistenten – gib ihm einen Namen, eine Sprache und einen System-Prompt.",
+                href: "/app/assistants/new",
+                done: hasAssistant,
+              },
+              {
+                title: "Guthaben aufladen",
+                description:
+                  "Lade Guthaben auf, damit Anrufe abgerechnet werden können.",
+                href: "/app/billing",
+                done: hasCredits,
+              },
+              {
+                title: "Kalender verbinden",
+                description:
+                  "Verbinde Google Calendar für automatische Terminbuchungen durch den Assistenten.",
+                href: "/app/calendar",
+                done: calendarConnected,
+                optional: true,
+              },
+            ]}
+          />
+        )}
+
         {/* KPI Grid */}
         <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
           <StatCard
