@@ -83,11 +83,9 @@ export default async function AnalyticsPage() {
     }));
 
   // ── Conversion funnel ────────────────────────────────────────────────────
-  const qualified = Math.round(answered * 0.72);
   const funnelData = [
     { stage: "Gesamt", count: total },
     { stage: "Beantwortet", count: answered },
-    { stage: "Qualifiziert", count: qualified },
     { stage: "Gebucht", count: booked },
   ];
 

@@ -222,8 +222,7 @@ export default async function CustomerHomePage() {
             <h2 className="text-base font-semibold text-gray-900 mb-4">System Status</h2>
             <div className="space-y-3">
               {[
-                { label: "Telefonie", ok: true },
-                { label: "Webhook Endpoint", ok: true },
+                { label: "Vapi Telefonie", ok: true },
                 { label: "KI Engine", ok: true },
                 {
                   label: "Kalender-Sync",

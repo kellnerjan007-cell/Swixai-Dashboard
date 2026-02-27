@@ -9,13 +9,6 @@ import { formatCurrency } from "@/lib/utils";
 import { Zap, TrendingUp, AlertTriangle, CheckCircle, XCircle } from "lucide-react";
 import { TopUpCard } from "@/components/customer/TopUpCard";
 
-const usageItems = [
-  { key: "STT", label: "Speech-to-Text", color: "bg-indigo-400", pct: 35 },
-  { key: "LLM", label: "KI-Modell (LLM)", color: "bg-violet-400", pct: 40 },
-  { key: "TTS", label: "Text-to-Speech", color: "bg-blue-400", pct: 15 },
-  { key: "Telephony", label: "Telefonie", color: "bg-emerald-400", pct: 10 },
-];
-
 export default async function BillingPage({
   searchParams,
 }: {
@@ -186,38 +179,12 @@ export default async function BillingPage({
 
         {/* Usage Breakdown */}
         <Card>
-          <h2 className="text-base font-semibold text-gray-900 mb-5">
+          <h2 className="text-base font-semibold text-gray-900 mb-4">
             Verbrauch nach Kategorie
           </h2>
-
-          {/* Bar */}
-          <div className="h-3 bg-gray-100 rounded-full overflow-hidden flex mb-5">
-            {usageItems.map((item) => (
-              <div
-                key={item.key}
-                className={`h-full ${item.color}`}
-                style={{ width: `${item.pct}%` }}
-              />
-            ))}
-          </div>
-
-          {/* Legend */}
-          <div className="grid grid-cols-2 gap-3">
-            {usageItems.map((item) => (
-              <div key={item.key} className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className={`w-2.5 h-2.5 rounded-full ${item.color}`} />
-                  <span className="text-sm text-gray-700">{item.label}</span>
-                </div>
-                <div className="text-right">
-                  <span className="text-sm font-semibold text-gray-900">
-                    {formatCurrency((monthSpent * item.pct) / 100, currency)}
-                  </span>
-                  <span className="text-xs text-gray-400 ml-1">({item.pct}%)</span>
-                </div>
-              </div>
-            ))}
-          </div>
+          <p className="text-sm text-gray-400 text-center py-6">
+            Detaillierte Aufschlüsselung nach Kategorie (STT, LLM, TTS, Telefonie) wird in einer zukünftigen Version verfügbar sein.
+          </p>
         </Card>
 
       </main>

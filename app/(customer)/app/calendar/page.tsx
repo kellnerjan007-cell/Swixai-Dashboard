@@ -106,10 +106,12 @@ export default async function CalendarPage({
             <div className="flex gap-2">
               {isConnected ? (
                 <>
-                  <Button variant="secondary" size="sm">
-                    <RefreshCw className="w-4 h-4" />
-                    Sync
-                  </Button>
+                  <a href="/app/calendar">
+                    <Button variant="secondary" size="sm">
+                      <RefreshCw className="w-4 h-4" />
+                      Sync
+                    </Button>
+                  </a>
                   <form action="/api/calendar/disconnect" method="POST">
                     <Button variant="ghost" size="sm" type="submit">
                       Trennen
