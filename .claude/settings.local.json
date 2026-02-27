@@ -1,7 +1,35 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm run build)"
+      "Bash(npm run build)",
+      "Bash(git add app/ components/ hooks/ lib/ next.config.ts package.json package-lock.json prisma/)",
+      "Bash(git push origin main)",
+      "Bash(npm run db:push)",
+      "Bash(DATABASE_URL=\"postgresql://postgres.imufbgahggkwhclhbzcc:SwixAI2024!@aws-1-eu-west-1.pooler.supabase.com:6543/postgres\" npx prisma db push)",
+      "Bash(DATABASE_URL='postgresql://postgres.imufbgahggkwhclhbzcc:SwixAI2024!@aws-1-eu-west-1.pooler.supabase.com:6543/postgres' npx prisma db push)",
+      "Bash(npm run dev)",
+      "Bash(chmod +x /Users/orloff/Downloads/voxai-dashboard/node_modules/.bin/*)",
+      "Bash(npm rebuild lightningcss)",
+      "Bash(ls -la /Users/orloff/Downloads/voxai-dashboard/node_modules/lightningcss/node/*.node)",
+      "Bash(npm install lightningcss --force)",
+      "Bash(chmod +x /Users/orloff/Downloads/voxai-dashboard/node_modules/lightningcss-darwin-arm64/lightningcss.darwin-arm64.node)",
+      "Bash(find /Users/orloff/Downloads/voxai-dashboard/node_modules -name \"*.node\" -exec chmod +x {} ;)",
+      "Bash(npm install)",
+      "Bash(ls -laR /Users/orloff/Downloads/voxai-dashboard/app/\\\\\\(customer\\\\\\)/app/billing)",
+      "Bash(ls -la /Users/orloff/Downloads/voxai-dashboard/app/\\\\\\(customer\\\\\\)/app)",
+      "Bash(ls -la /Users/orloff/Downloads/voxai-dashboard/app/\\\\\\(auth\\\\\\))",
+      "Bash(npm install stripe)",
+      "Bash(npx prisma db push)",
+      "Bash(npx prisma generate)",
+      "Bash(npx tsx -e \":*)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" -X POST \"https://forty-breads-kick.loca.lt/api/webhooks/vapi\" -H \"Content-Type: application/json\" -d '{\"\"message\"\":{\"\"type\"\":\"\"test\"\"}}')",
+      "WebFetch(domain:api.vapi.ai)",
+      "WebFetch(domain:docs.vapi.ai)",
+      "WebFetch(domain:vapi.ai)",
+      "WebFetch(domain:www.postman.com)",
+      "WebFetch(domain:github.com)",
+      "Bash(curl -s \"https://api.vapi.ai/api-json\")",
+      "Bash(python3 -c \":*)"
     ]
   }
 }
