@@ -72,6 +72,7 @@ model Workspace {
   calendarConnections CalendarConnection[]
   billing             Billing?
   webhookLogs         WebhookLog[]
+  teamInvites         TeamInvite[]
 
   @@map("workspaces")
 }
@@ -182,6 +183,22 @@ model Billing {
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@map("billing")
+}
+
+model TeamInvite {
+  id          String     @id @default(cuid())
+  workspaceId String
+  email       String
+  role        MemberRole @default(MEMBER)
+  token       String     @unique
+  invitedById String
+  expiresAt   DateTime
+  createdAt   DateTime   @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, email])
+  @@map("team_invites")
 }
 
 model PasswordResetToken {

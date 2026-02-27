@@ -37,6 +37,37 @@ async function sendEmail({
   }
 }
 
+export async function sendTeamInviteEmail(
+  to: string,
+  inviterName: string,
+  workspaceName: string,
+  inviteUrl: string
+) {
+  await sendEmail({
+    to,
+    subject: `${inviterName} hat dich zu ${workspaceName} auf SwixAI eingeladen`,
+    html: `
+      <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:32px">
+        <h1 style="font-size:24px;font-weight:700;color:#111">Einladung zu ${workspaceName}</h1>
+        <p style="color:#555;margin:16px 0">
+          <strong>${inviterName}</strong> hat dich eingeladen, dem Team <strong>${workspaceName}</strong>
+          auf SwixAI beizutreten.
+        </p>
+        <a href="${inviteUrl}"
+           style="display:inline-block;background:#000;color:#fff;padding:12px 24px;border-radius:10px;text-decoration:none;font-weight:600;margin:8px 0">
+          Einladung annehmen
+        </a>
+        <p style="color:#999;font-size:13px;margin-top:24px">
+          Der Link ist 7 Tage gültig. Falls du diese Einladung nicht erwartet hast,
+          kannst du diese E-Mail ignorieren.
+        </p>
+        <hr style="border:none;border-top:1px solid #eee;margin:24px 0"/>
+        <p style="color:#bbb;font-size:12px">SwixAI · Voice AI Platform</p>
+      </div>
+    `,
+  });
+}
+
 export async function sendPasswordResetEmail(to: string, resetUrl: string) {
   await sendEmail({
     to,

@@ -6,6 +6,14 @@ import { getUserWorkspace, getOrCreateWorkspace } from "@/lib/workspace";
 import { assistantSchema } from "@/lib/validations";
 import { createVapiAssistant } from "@/lib/vapi";
 import type { ToolsConfig } from "@/lib/vapi";
+import { decryptIfEncrypted } from "@/lib/crypto";
+
+// Max assistants per plan (-1 = unlimited)
+const PLAN_LIMITS: Record<string, number> = {
+  starter: 1,
+  pro: 5,
+  enterprise: -1,
+};
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -30,6 +38,18 @@ export async function POST(req: NextRequest) {
   const workspace = await getOrCreateWorkspace(session.user.id);
   if (!workspace) return NextResponse.json({ error: "Kein Benutzer gefunden" }, { status: 400 });
 
+  // Enforce plan-based assistant limit
+  const planLimit = PLAN_LIMITS[workspace.plan] ?? PLAN_LIMITS.starter;
+  if (planLimit !== -1) {
+    const count = await db.assistant.count({ where: { workspaceId: workspace.id } });
+    if (count >= planLimit) {
+      return NextResponse.json(
+        { error: `Ihr Plan (${workspace.plan}) erlaubt maximal ${planLimit} Assistent${planLimit === 1 ? "" : "en"}. Bitte upgraden Sie Ihren Plan.` },
+        { status: 403 }
+      );
+    }
+  }
+
   const body = await req.json();
   const parsed = assistantSchema.safeParse(body);
   if (!parsed.success) {
@@ -48,7 +68,7 @@ export async function POST(req: NextRequest) {
   });
 
   // 2. Sync to Vapi — skip if user already provided a vapiAssistantId
-  const vapiKey = workspace.vapiApiKey || process.env.VAPI_API_KEY;
+  const vapiKey = (workspace.vapiApiKey ? decryptIfEncrypted(workspace.vapiApiKey) : null) || process.env.VAPI_API_KEY;
   let vapiSyncFailed = false;
   let vapiSyncError: string | undefined;
 

@@ -191,7 +191,7 @@ export async function POST(req: NextRequest) {
         await db.call.create({ data: callData });
       }
 
-      // Deduct credits from workspace billing
+      // Deduct credits from workspace billing (floor at 0 to prevent negative balance)
       if (costTotal && workspaceId) {
         await db.billing.upsert({
           where: { workspaceId },
@@ -201,11 +201,17 @@ export async function POST(req: NextRequest) {
           },
           create: {
             workspaceId,
-            creditsBalance: -costTotal,
+            creditsBalance: 0,
             totalSpent: costTotal,
             currency: "EUR",
           },
         });
+        // Ensure balance never goes negative (single-query clamp)
+        await db.$executeRaw`
+          UPDATE billing
+          SET "creditsBalance" = GREATEST(0, "creditsBalance")
+          WHERE "workspaceId" = ${workspaceId}
+        `;
       }
     }
 

@@ -31,7 +31,8 @@ function LoginForm() {
     if (res?.error) {
       setError("E-Mail oder Passwort falsch.");
     } else {
-      router.push("/");
+      const callbackUrl = searchParams.get("callbackUrl");
+      router.push(callbackUrl ?? "/");
       router.refresh();
     }
   }

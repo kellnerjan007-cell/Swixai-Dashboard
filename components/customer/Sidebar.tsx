@@ -15,6 +15,7 @@ import {
   LogOut,
   Mic,
   Shield,
+  Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -35,6 +36,7 @@ const insightItems = [
 
 const settingsItems = [
   { href: "/app/billing", label: "Billing & Credits", icon: CreditCard },
+  { href: "/app/team", label: "Team", icon: Users },
   { href: "/app/settings", label: "Einstellungen", icon: Settings },
 ];
 

@@ -6,6 +6,7 @@ import { getOrCreateWorkspace } from "@/lib/workspace";
 import { assistantSchema } from "@/lib/validations";
 import { updateVapiAssistant, deleteVapiAssistant } from "@/lib/vapi";
 import type { ToolsConfig } from "@/lib/vapi";
+import { decryptIfEncrypted } from "@/lib/crypto";
 
 async function getAssistantWithAuth(
   assistantId: string,
@@ -19,7 +20,8 @@ async function getAssistantWithAuth(
   });
   if (!assistant) return { ok: false, error: "Not found", status: 404 };
 
-  return { ok: true, assistant, vapiKey: workspace.vapiApiKey || process.env.VAPI_API_KEY };
+  const vapiKey = (workspace.vapiApiKey ? decryptIfEncrypted(workspace.vapiApiKey) : null) || process.env.VAPI_API_KEY;
+  return { ok: true, assistant, vapiKey };
 }
 
 export async function GET(
