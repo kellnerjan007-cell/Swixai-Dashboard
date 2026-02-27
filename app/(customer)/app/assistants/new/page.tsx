@@ -26,7 +26,8 @@ export default function NewAssistantPage() {
     });
     const json = await res.json();
     if (!res.ok) throw new Error(json.error ?? "Fehler beim Erstellen");
-    router.push(`/app/assistants/${json.id}`);
+    const params = json.vapiSyncFailed ? "?vapi_error=1" : "";
+    router.push(`/app/assistants/${json.id}${params}`);
   }
 
   return (

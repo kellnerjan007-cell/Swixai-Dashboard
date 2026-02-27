@@ -1,7 +1,21 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { useState, useEffect, use, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { AssistantEditor, AssistantFormData, DEFAULT_TOOLS_CONFIG } from "@/components/customer/AssistantEditor";
+
+function VapiErrorBanner() {
+  const searchParams = useSearchParams();
+  if (searchParams.get("vapi_error") !== "1") return null;
+  return (
+    <div className="max-w-3xl mx-auto px-4 pt-4">
+      <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800">
+        <strong>Vapi-Synchronisierung fehlgeschlagen.</strong> Der Assistent wurde gespeichert, konnte aber nicht an Vapi übertragen werden.
+        Prüfe deinen Vapi API Key unter Einstellungen oder speichere den Assistenten erneut.
+      </div>
+    </div>
+  );
+}
 
 export default function AssistantDetailPage({
   params,
@@ -59,13 +73,18 @@ export default function AssistantDetailPage({
   }
 
   return (
-    <AssistantEditor
-      mode="edit"
-      initialData={initialData}
-      assistantId={id}
-      assistantName={assistantName}
-      onSave={handleSave}
-      onDelete={handleDelete}
-    />
+    <>
+      <Suspense fallback={null}>
+        <VapiErrorBanner />
+      </Suspense>
+      <AssistantEditor
+        mode="edit"
+        initialData={initialData}
+        assistantId={id}
+        assistantName={assistantName}
+        onSave={handleSave}
+        onDelete={handleDelete}
+      />
+    </>
   );
 }

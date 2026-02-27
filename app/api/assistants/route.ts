@@ -49,6 +49,9 @@ export async function POST(req: NextRequest) {
 
   // 2. Sync to Vapi — skip if user already provided a vapiAssistantId
   const vapiKey = workspace.vapiApiKey || process.env.VAPI_API_KEY;
+  let vapiSyncFailed = false;
+  let vapiSyncError: string | undefined;
+
   if (vapiKey && !parsed.data.vapiAssistantId) {
     try {
       const vapiId = await createVapiAssistant({
@@ -65,8 +68,13 @@ export async function POST(req: NextRequest) {
       assistant.vapiAssistantId = vapiId;
     } catch (err) {
       console.error("[VAPI] Failed to create assistant in Vapi:", err);
+      vapiSyncFailed = true;
+      vapiSyncError = err instanceof Error ? err.message : "Vapi-Synchronisierung fehlgeschlagen";
     }
   }
 
-  return NextResponse.json(assistant, { status: 201 });
+  return NextResponse.json(
+    { ...assistant, vapiSyncFailed, vapiSyncError },
+    { status: 201 }
+  );
 }

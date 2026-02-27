@@ -3,8 +3,16 @@ import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
 import { signupSchema } from "@/lib/validations";
 import { slugify } from "@/lib/utils";
+import { rateLimit, getClientIp } from "@/lib/rate-limit";
 
 export async function POST(req: NextRequest) {
+  const { success } = rateLimit(getClientIp(req), 5, 60 * 60 * 1000); // 5 per hour
+  if (!success) {
+    return NextResponse.json(
+      { error: "Zu viele Anfragen. Bitte in einer Stunde erneut versuchen." },
+      { status: 429 }
+    );
+  }
   try {
     const body = await req.json();
     const parsed = signupSchema.safeParse(body);

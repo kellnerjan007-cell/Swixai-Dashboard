@@ -13,10 +13,19 @@ import { getServerSession } from "next-auth";
 import Stripe from "stripe";
 import { authOptions } from "@/lib/auth";
 import { getUserWorkspace } from "@/lib/workspace";
+import { rateLimit, getClientIp } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
+  const { success } = rateLimit(getClientIp(req), 10, 60 * 60 * 1000); // 10 per hour
+  if (!success) {
+    return NextResponse.json(
+      { error: "Zu viele Anfragen. Bitte in einer Stunde erneut versuchen." },
+      { status: 429 }
+    );
+  }
+
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
   const session = await getServerSession(authOptions);
   if (!session) {
