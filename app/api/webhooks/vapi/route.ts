@@ -16,6 +16,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { timingSafeEqual } from "crypto";
 import { db } from "@/lib/db";
 
 // ─── Vapi Payload Types ────────────────────────────────────────────────────────
@@ -69,6 +70,27 @@ async function findAssistantByVapiId(vapiAssistantId: string) {
 // ─── Handler ──────────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
+  // ── Signature verification ──────────────────────────────────────────────────
+  // Vapi sends the Server Secret (configured in Vapi Dashboard → Settings →
+  // Webhooks → Server Secret) as the Authorization header: "Bearer <secret>".
+  // Set VAPI_WEBHOOK_SECRET in your env to enable verification.
+  const webhookSecret = process.env.VAPI_WEBHOOK_SECRET;
+  if (webhookSecret) {
+    const authHeader = req.headers.get("authorization") ?? "";
+    const expected = `Bearer ${webhookSecret}`;
+    let valid = false;
+    try {
+      const a = Buffer.from(authHeader);
+      const b = Buffer.from(expected);
+      valid = a.length === b.length && timingSafeEqual(a, b);
+    } catch {
+      valid = false;
+    }
+    if (!valid) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+  }
+
   let body: VapiPayload;
 
   try {

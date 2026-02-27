@@ -1,10 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
+import { rateLimit, getClientIp } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
+  const { success } = rateLimit(getClientIp(req), 5, 60 * 60 * 1000);
+  if (!success) {
+    return NextResponse.json(
+      { error: "Zu viele Versuche. Bitte warte eine Stunde." },
+      { status: 429 }
+    );
+  }
+
   const body = await req.json();
   const { token, password } = body;
 
