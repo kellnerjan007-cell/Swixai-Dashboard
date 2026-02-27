@@ -9,19 +9,27 @@ const PRESETS = [10, 25, 50, 100];
 export function TopUpCard({ currency = "EUR" }: { currency?: string }) {
   const [custom, setCustom] = useState("");
   const [loading, setLoading] = useState<number | "custom" | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   async function checkout(amount: number, key: number | "custom") {
     if (!amount || amount < 1) return;
     setLoading(key);
-    const res = await fetch("/api/billing/checkout", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ amount }),
-    });
-    const data = await res.json();
-    if (data.url) {
-      window.location.href = data.url;
-    } else {
+    setError(null);
+    try {
+      const res = await fetch("/api/billing/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount }),
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        setError(data.error ?? "Fehler beim Erstellen der Zahlung");
+        setLoading(null);
+      }
+    } catch {
+      setError("Netzwerkfehler – bitte erneut versuchen");
       setLoading(null);
     }
   }
@@ -59,6 +67,9 @@ export function TopUpCard({ currency = "EUR" }: { currency?: string }) {
         </button>
       </div>
 
+      {error && (
+        <p className="text-xs text-red-500 text-center pt-1">{error}</p>
+      )}
       <p className="text-xs text-gray-400 text-center pt-1">Powered by Stripe</p>
     </div>
   );
