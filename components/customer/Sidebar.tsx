@@ -61,7 +61,7 @@ function NavItem({
         "flex items-center gap-3 px-3 py-2.5 rounded-xl transition text-sm font-medium",
         active
           ? "bg-black text-white"
-          : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+          : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white"
       )}
     >
       <Icon className="w-4 h-4 flex-shrink-0" />
@@ -79,7 +79,7 @@ function NavSection({
 }) {
   return (
     <div className="space-y-1">
-      <p className="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
+      <p className="px-3 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2">
         {title}
       </p>
       {items.map((item) => (
@@ -96,17 +96,17 @@ interface CustomerSidebarProps {
 
 export function CustomerSidebar({ workspaceName, isAdmin }: CustomerSidebarProps) {
   return (
-    <aside className="w-64 h-full bg-white border-r border-gray-100 flex flex-col flex-shrink-0">
+    <aside className="w-64 h-full bg-white dark:bg-gray-900 border-r border-gray-100 dark:border-gray-800 flex flex-col flex-shrink-0">
       {/* Logo */}
-      <div className="px-5 py-5 border-b border-gray-100">
+      <div className="px-5 py-5 border-b border-gray-100 dark:border-gray-800">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center">
             <Mic className="w-4 h-4 text-white" />
           </div>
           <div>
-            <p className="text-sm font-bold text-gray-900">SwixAI</p>
+            <p className="text-sm font-bold text-gray-900 dark:text-white">SwixAI</p>
             {workspaceName && (
-              <p className="text-xs text-gray-500 truncate max-w-[140px]">
+              <p className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[140px]">
                 {workspaceName}
               </p>
             )}
@@ -127,12 +127,12 @@ export function CustomerSidebar({ workspaceName, isAdmin }: CustomerSidebarProps
       </nav>
 
       {/* Footer */}
-      <div className="px-3 py-4 border-t border-gray-100 space-y-1">
+      <div className="px-3 py-4 border-t border-gray-100 dark:border-gray-800 space-y-1">
         {/* Admin-Panel-Button: nur für Admins sichtbar */}
         {isAdmin && (
           <Link
             href="/admin"
-            className="flex items-center gap-3 px-3 py-2.5 rounded-xl w-full text-sm font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 transition"
+            className="flex items-center gap-3 px-3 py-2.5 rounded-xl w-full text-sm font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950 hover:bg-indigo-100 dark:hover:bg-indigo-900 transition"
           >
             <Shield className="w-4 h-4" />
             <span>Admin Dashboard</span>
@@ -141,7 +141,7 @@ export function CustomerSidebar({ workspaceName, isAdmin }: CustomerSidebarProps
 
         <button
           onClick={() => signOut({ callbackUrl: "/login" })}
-          className="flex items-center gap-3 px-3 py-2.5 rounded-xl w-full text-left text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition"
+          className="flex items-center gap-3 px-3 py-2.5 rounded-xl w-full text-left text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white transition"
         >
           <LogOut className="w-4 h-4" />
           <span>Abmelden</span>

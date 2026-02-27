@@ -20,7 +20,7 @@ export default async function CustomerLayout({
   });
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50">
+    <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-950">
       <CustomerSidebar workspaceName={membership?.workspace?.name} isAdmin={session.user.role === "ADMIN"} />
       <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
         {children}

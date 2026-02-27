@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme inline {
   --color-brand: #000000;
   --color-brand-muted: #374151;
@@ -25,6 +27,11 @@ body {
     "Helvetica Neue", Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+.dark body {
+  background: #030712;
+  color: #f9fafb;
 }
 
 /* Scrollbar */

@@ -18,6 +18,7 @@ export default async function RootLayout({
 
   return (
     <html lang="de">
+      <script dangerouslySetInnerHTML={{ __html: `(function(){var t=localStorage.getItem('theme');if(t==='dark')document.documentElement.classList.add('dark')})()` }} />
       <body className="antialiased">
         <AuthProvider session={session}>{children}</AuthProvider>
       </body>
