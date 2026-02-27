@@ -54,6 +54,16 @@ npm run build        # prisma generate && next build
 - Build script must be `"prisma generate && next build"` (postinstall alone is unreliable)
 - DATABASE_URL must point to Session Pooler (port 5432) in Vercel env vars
 - `app/generated/prisma/` is in `.gitignore` — must be generated at build time
+- Actual deployed project name: `swixai-dashboard` (link with `vercel link --project swixai-dashboard`)
+- Production URL: `https://swixai-dashboard.vercel.app`
+- NEXTAUTH_URL must match the actual URL users access the site from
+
+## Vercel CLI – Env Vars (CRITICAL)
+- ALWAYS use `printf` not `echo` when setting env vars via CLI
+- `echo` adds a trailing `\n` newline → corrupts API keys → Stripe/Google SDKs reject them
+- CORRECT: `printf 'value' | vercel env add KEY production --force`
+- WRONG:   `echo 'value' | vercel env add KEY production --force`
+- To verify: `vercel env pull .check --environment production --yes && grep KEY .check && rm .check`
 
 ## Demo Credentials (after seed)
 - Admin: `admin@swixai.com` / `admin123`
