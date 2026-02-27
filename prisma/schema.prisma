@@ -144,7 +144,7 @@ model Call {
   costBreakdownJson Json?
   recordingUrl      String?
   transcriptText    String?
-  providerCallId    String?
+  providerCallId    String?   @unique
   tags              String[]  @default([])
   intent            String?
   bookingStatus     String?
