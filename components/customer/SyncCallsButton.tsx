@@ -16,10 +16,16 @@ export function SyncCallsButton() {
       const res = await fetch("/api/calls/sync", { method: "POST" });
       const data = await res.json();
       if (res.ok) {
-        setStatus(`${data.synced} von ${data.total} importiert`);
-        router.refresh();
+        if (!silent) {
+          // Manual sync: always refresh to immediately show new calls
+          setStatus(`${data.synced} von ${data.total} importiert`);
+          router.refresh();
+        } else if (data.synced > 0) {
+          // Silent background sync: only refresh if new calls were actually imported
+          router.refresh();
+        }
       } else {
-        setStatus(`Fehler: ${data.error ?? res.statusText}`);
+        if (!silent) setStatus(`Fehler: ${data.error ?? res.statusText}`);
       }
     } catch (e) {
       if (!silent) setStatus(`Fehler: ${e instanceof Error ? e.message : "Unbekannt"}`);
