@@ -8,29 +8,27 @@ import { Button } from "@/components/ui/Button";
 export function SyncCallsButton() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [lastSynced, setLastSynced] = useState<string | null>(null);
+  const [status, setStatus] = useState<string | null>(null);
 
   const sync = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     try {
       const res = await fetch("/api/calls/sync", { method: "POST" });
+      const data = await res.json();
       if (res.ok) {
-        setLastSynced(new Date().toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" }));
+        setStatus(`${data.synced} von ${data.total} importiert`);
         router.refresh();
+      } else {
+        setStatus(`Fehler: ${data.error ?? res.statusText}`);
       }
-    } catch {
-      // silent fail for auto-sync
+    } catch (e) {
+      if (!silent) setStatus(`Fehler: ${e instanceof Error ? e.message : "Unbekannt"}`);
     } finally {
       if (!silent) setLoading(false);
     }
   }, [router]);
 
-  // Auto-sync on mount
-  useEffect(() => {
-    sync(true);
-  }, [sync]);
-
-  // Auto-sync every 60 seconds
+  useEffect(() => { sync(true); }, [sync]);
   useEffect(() => {
     const interval = setInterval(() => sync(true), 60_000);
     return () => clearInterval(interval);
@@ -38,8 +36,10 @@ export function SyncCallsButton() {
 
   return (
     <div className="flex items-center gap-3">
-      {lastSynced && (
-        <span className="text-xs text-gray-400">Sync: {lastSynced}</span>
+      {status && (
+        <span className={`text-xs ${status.startsWith("Fehler") ? "text-red-500" : "text-gray-400"}`}>
+          {status}
+        </span>
       )}
       <Button variant="secondary" size="sm" onClick={() => sync(false)} loading={loading}>
         <RefreshCw className="w-4 h-4" />
