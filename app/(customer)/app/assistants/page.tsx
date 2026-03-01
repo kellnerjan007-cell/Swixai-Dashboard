@@ -9,6 +9,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
 import { Plus, UserRound } from "lucide-react";
 import { AssistantList } from "@/components/customer/AssistantList";
+import { ImportVapiButton } from "@/components/customer/ImportVapiButton";
 
 export default async function AssistantsPage() {
   const session = await getServerSession(authOptions);
@@ -46,12 +47,15 @@ export default async function AssistantsPage() {
         title="Assistenten"
         subtitle={`${assistants.length} Assistent${assistants.length !== 1 ? "en" : ""}`}
         actions={
-          <Link href="/app/assistants/new">
-            <Button size="sm">
-              <Plus className="w-4 h-4" />
-              Neu erstellen
-            </Button>
-          </Link>
+          <div className="flex gap-2">
+            <ImportVapiButton />
+            <Link href="/app/assistants/new">
+              <Button size="sm">
+                <Plus className="w-4 h-4" />
+                Neu erstellen
+              </Button>
+            </Link>
+          </div>
         }
       />
       <main className="flex-1 px-8 py-8">
