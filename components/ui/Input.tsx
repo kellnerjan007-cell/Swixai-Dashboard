@@ -10,19 +10,19 @@ export function Input({ label, error, hint, className, ...props }: InputProps) {
   return (
     <div className="space-y-1.5">
       {label && (
-        <label className="block text-sm font-medium text-gray-700">{label}</label>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{label}</label>
       )}
       <input
         {...props}
         className={cn(
-          "w-full px-4 py-2.5 rounded-xl border bg-white text-gray-900 placeholder:text-gray-400",
-          "focus:outline-none focus:ring-2 focus:ring-black/20 focus:border-black transition text-sm",
-          error ? "border-red-300" : "border-gray-200",
+          "w-full px-4 py-2.5 rounded-xl border bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500",
+          "focus:outline-none focus:ring-2 focus:ring-black/20 dark:focus:ring-white/20 focus:border-black dark:focus:border-gray-500 transition text-sm",
+          error ? "border-red-300 dark:border-red-700" : "border-gray-200 dark:border-gray-700",
           className
         )}
       />
-      {error && <p className="text-xs text-red-600">{error}</p>}
-      {hint && !error && <p className="text-xs text-gray-500">{hint}</p>}
+      {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}
+      {hint && !error && <p className="text-xs text-gray-500 dark:text-gray-400">{hint}</p>}
     </div>
   );
 }
@@ -37,19 +37,19 @@ export function Textarea({ label, error, hint, className, ...props }: TextareaPr
   return (
     <div className="space-y-1.5">
       {label && (
-        <label className="block text-sm font-medium text-gray-700">{label}</label>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{label}</label>
       )}
       <textarea
         {...props}
         className={cn(
-          "w-full px-4 py-2.5 rounded-xl border bg-white text-gray-900 placeholder:text-gray-400",
-          "focus:outline-none focus:ring-2 focus:ring-black/20 focus:border-black transition text-sm resize-none",
-          error ? "border-red-300" : "border-gray-200",
+          "w-full px-4 py-2.5 rounded-xl border bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500",
+          "focus:outline-none focus:ring-2 focus:ring-black/20 dark:focus:ring-white/20 focus:border-black dark:focus:border-gray-500 transition text-sm resize-none",
+          error ? "border-red-300 dark:border-red-700" : "border-gray-200 dark:border-gray-700",
           className
         )}
       />
-      {error && <p className="text-xs text-red-600">{error}</p>}
-      {hint && !error && <p className="text-xs text-gray-500">{hint}</p>}
+      {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}
+      {hint && !error && <p className="text-xs text-gray-500 dark:text-gray-400">{hint}</p>}
     </div>
   );
 }
@@ -64,14 +64,14 @@ export function Select({ label, error, options, className, ...props }: SelectPro
   return (
     <div className="space-y-1.5">
       {label && (
-        <label className="block text-sm font-medium text-gray-700">{label}</label>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{label}</label>
       )}
       <select
         {...props}
         className={cn(
-          "w-full px-4 py-2.5 rounded-xl border bg-white text-gray-900",
-          "focus:outline-none focus:ring-2 focus:ring-black/20 focus:border-black transition text-sm",
-          error ? "border-red-300" : "border-gray-200",
+          "w-full px-4 py-2.5 rounded-xl border bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100",
+          "focus:outline-none focus:ring-2 focus:ring-black/20 dark:focus:ring-white/20 focus:border-black dark:focus:border-gray-500 transition text-sm",
+          error ? "border-red-300 dark:border-red-700" : "border-gray-200 dark:border-gray-700",
           className
         )}
       >
@@ -81,7 +81,7 @@ export function Select({ label, error, options, className, ...props }: SelectPro
           </option>
         ))}
       </select>
-      {error && <p className="text-xs text-red-600">{error}</p>}
+      {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}
     </div>
   );
 }

@@ -6,8 +6,60 @@ import { Topbar } from "@/components/customer/Topbar";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { formatCurrency } from "@/lib/utils";
-import { Zap, TrendingUp, AlertTriangle, CheckCircle, XCircle } from "lucide-react";
+import { Zap, AlertTriangle, CheckCircle, XCircle, Check } from "lucide-react";
 import { TopUpCard } from "@/components/customer/TopUpCard";
+
+const PLANS = [
+  {
+    key: "starter",
+    label: "Starter",
+    price: "149",
+    subtitle: "Geeignet für 1–20 Anrufe/Tag",
+    features: [
+      "500 Minuten inkl. · danach 0,39 CHF/Min",
+      "1 KI-Agent mit eigener Stimme",
+      "Terminbuchung & Kalender-Sync",
+      "Basis-Analytics Dashboard",
+      "E-Mail Support",
+    ],
+    popular: false,
+    ctaLabel: "Kontakt aufnehmen",
+  },
+  {
+    key: "pro",
+    label: "Pro",
+    price: "299",
+    subtitle: "Geeignet für 20–80 Anrufe/Tag",
+    features: [
+      "1.000 Minuten inkl. · danach 0,29 CHF/Min",
+      "1 Agent · 6 Stimmen wählbar",
+      "Erweiterte Analytics & Transkripte",
+      "Stimmungsanalyse (KI)",
+      "SMS- & E-Mail-Bestätigungen",
+      "Prioritäts-Support (Chat)",
+      "Mehrsprachigkeit inklusive",
+    ],
+    popular: true,
+    ctaLabel: "Upgrade auf Pro",
+  },
+  {
+    key: "business",
+    label: "Business",
+    price: "599",
+    subtitle: "Geeignet für 80+ Anrufe/Tag",
+    features: [
+      "2.500 Minuten inkl. · danach 0,19 CHF/Min",
+      "Bis zu 3 KI-Agenten",
+      "CRM-Integration (HubSpot etc.)",
+      "Individuelle Gesprächslogik",
+      "Dedizierter Account Manager",
+      "SLA & 99,9 % Uptime Garantie",
+      "Custom Branding & Vanity Number",
+    ],
+    popular: false,
+    ctaLabel: "Kontakt aufnehmen",
+  },
+] as const;
 
 export default async function BillingPage({
   searchParams,
@@ -175,6 +227,69 @@ export default async function BillingPage({
             </div>
             <TopUpCard currency={currency} />
           </Card>
+        </div>
+
+        {/* Plan Overview */}
+        <div>
+          <h2 className="text-base font-semibold text-gray-900 mb-4">Verfügbare Pläne</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {PLANS.map((plan) => {
+              const isCurrent = (workspace?.plan ?? "starter") === plan.key;
+              return (
+                <div
+                  key={plan.key}
+                  className={`relative rounded-2xl border p-6 flex flex-col gap-4 ${
+                    isCurrent
+                      ? "border-gray-900 bg-gray-900 text-white"
+                      : plan.popular
+                      ? "border-amber-300 bg-white"
+                      : "border-gray-200 bg-white"
+                  }`}
+                >
+                  {plan.popular && !isCurrent && (
+                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-amber-400 text-amber-900 text-xs font-semibold px-3 py-0.5 rounded-full">
+                      Beliebt
+                    </span>
+                  )}
+                  {isCurrent && (
+                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-white text-gray-900 text-xs font-semibold px-3 py-0.5 rounded-full border border-gray-200">
+                      Ihr Plan
+                    </span>
+                  )}
+                  <div>
+                    <p className={`text-xs font-semibold tracking-widest uppercase mb-1 ${isCurrent ? "text-gray-400" : "text-gray-500"}`}>
+                      {plan.label}
+                    </p>
+                    <p className={`text-xs mb-3 ${isCurrent ? "text-gray-400" : "text-gray-400"}`}>{plan.subtitle}</p>
+                    <div className="flex items-baseline gap-1">
+                      <span className={`text-4xl font-bold ${isCurrent ? "text-white" : "text-gray-900"}`}>{plan.price}</span>
+                      <span className={`text-sm ${isCurrent ? "text-gray-400" : "text-gray-500"}`}>CHF / Monat · zzgl. MwSt.</span>
+                    </div>
+                  </div>
+                  <ul className="space-y-2 flex-1">
+                    {plan.features.map((f) => (
+                      <li key={f} className="flex items-start gap-2 text-sm">
+                        <Check className={`w-4 h-4 flex-shrink-0 mt-0.5 ${isCurrent ? "text-emerald-400" : "text-emerald-600"}`} />
+                        <span className={isCurrent ? "text-gray-300" : "text-gray-600"}>{f}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  {isCurrent ? (
+                    <div className="mt-2 text-center text-sm font-medium py-2.5 rounded-xl bg-white/10 text-white cursor-default">
+                      Aktueller Plan
+                    </div>
+                  ) : (
+                    <a
+                      href={`mailto:office@swixai.info?subject=${encodeURIComponent(`Interesse: ${plan.label}-Plan`)}&body=${encodeURIComponent(`Hallo,\n\nich interessiere mich für den ${plan.label}-Plan (${plan.price} CHF/Monat).\n\nWorkspace: ${workspace?.name ?? ""}\n\nBitte meldet euch bei mir.\n\nViele Grüße`)}`}
+                      className="mt-2 block text-center text-sm font-medium py-2.5 rounded-xl bg-gray-900 text-white hover:bg-gray-700 transition-colors"
+                    >
+                      {plan.ctaLabel}
+                    </a>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
 
         {/* Usage Breakdown */}

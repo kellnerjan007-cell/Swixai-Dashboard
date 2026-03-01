@@ -17,7 +17,7 @@ export function Table({ children, className }: TableProps) {
 
 export function Thead({ children }: { children: React.ReactNode }) {
   return (
-    <thead className="border-b border-gray-100">
+    <thead className="border-b border-gray-100 dark:border-gray-800">
       <tr>{children}</tr>
     </thead>
   );
@@ -33,7 +33,7 @@ export function Th({
   return (
     <th
       className={cn(
-        "px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide",
+        "px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide",
         className
       )}
     >
@@ -43,7 +43,7 @@ export function Th({
 }
 
 export function Tbody({ children }: { children: React.ReactNode }) {
-  return <tbody className="divide-y divide-gray-50">{children}</tbody>;
+  return <tbody className="divide-y divide-gray-50 dark:divide-gray-800">{children}</tbody>;
 }
 
 export function Tr({
@@ -63,7 +63,7 @@ export function Tr({
     <tr
       onClick={handleClick}
       className={cn(
-        "hover:bg-gray-50 transition",
+        "hover:bg-gray-50 dark:hover:bg-gray-800/50 transition",
         handleClick && "cursor-pointer",
         className
       )}
@@ -83,7 +83,7 @@ export function Td({
   colSpan?: number;
 }) {
   return (
-    <td colSpan={colSpan} className={cn("px-4 py-3 text-gray-700", className)}>
+    <td colSpan={colSpan} className={cn("px-4 py-3 text-gray-700 dark:text-gray-300", className)}>
       {children}
     </td>
   );

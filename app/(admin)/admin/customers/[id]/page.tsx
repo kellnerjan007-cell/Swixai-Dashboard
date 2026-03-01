@@ -54,6 +54,7 @@ export default function AdminCustomerDetailPage({
   const [creditAmount, setCreditAmount] = useState("");
   const [creditReason, setCreditReason] = useState("");
   const [saving, setSaving] = useState(false);
+  const [planSaving, setPlanSaving] = useState(false);
 
   async function load() {
     const res = await fetch(`/api/admin/customers/${id}`);
@@ -86,6 +87,17 @@ export default function AdminCustomerDetailPage({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: newStatus }),
     });
+    load();
+  }
+
+  async function changePlan(newPlan: string) {
+    setPlanSaving(true);
+    await fetch(`/api/admin/customers/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ plan: newPlan }),
+    });
+    setPlanSaving(false);
     load();
   }
 
@@ -169,6 +181,31 @@ export default function AdminCustomerDetailPage({
             </Card>
           ))}
         </div>
+
+        {/* Plan */}
+        <Card>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold text-gray-900">Aktueller Plan</p>
+              <p className="text-xs text-gray-400 mt-0.5">Änderungen werden sofort gespeichert</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <select
+                value={ws.plan}
+                onChange={(e) => changePlan(e.target.value)}
+                disabled={planSaving}
+                className="text-sm border border-gray-200 rounded-xl px-3 py-2 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900 disabled:opacity-50"
+              >
+                <option value="starter">Starter</option>
+                <option value="pro">Pro</option>
+                <option value="business">Business</option>
+              </select>
+              {planSaving && (
+                <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+              )}
+            </div>
+          </div>
+        </Card>
 
         {/* Members */}
         <Card>

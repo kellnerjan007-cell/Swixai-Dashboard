@@ -4,7 +4,8 @@
  * Without the key, emails are logged to console (dev fallback).
  */
 
-const FROM = "SwixAI <noreply@swixai.com>";
+// TODO: Auf "SwixAI <noreply@swixai.com>" umstellen sobald swixai.com in Resend verifiziert ist
+const FROM = "SwixAI <onboarding@resend.dev>";
 
 async function sendEmail({
   to,
