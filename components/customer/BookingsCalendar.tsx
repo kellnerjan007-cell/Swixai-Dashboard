@@ -2,13 +2,15 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, ChevronRight, Phone, Mic, Clock, Calendar } from "lucide-react";
-import { Badge } from "@/components/ui/Badge";
+import { ChevronLeft, ChevronRight, User, Mic, Clock, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { Badge } from "@/components/ui/Badge";
 
 interface BookingCall {
   id: string;
+  bookingDate: Date | null;
   startedAt: Date;
+  customerName: string | null;
   fromNumber: string | null;
   durationSec: number | null;
   assistant: { name: string } | null;
@@ -24,7 +26,10 @@ function formatTime(d: Date) {
   return new Date(d).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
 }
 function formatDateTime(d: Date) {
-  return new Date(d).toLocaleString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  return new Date(d).toLocaleString("de-DE", {
+    day: "2-digit", month: "2-digit", year: "numeric",
+    hour: "2-digit", minute: "2-digit",
+  });
 }
 function formatDuration(sec: number) {
   const m = Math.floor(sec / 60);
@@ -36,15 +41,17 @@ export function BookingsCalendar({ year, month, bookings }: Props) {
   const router = useRouter();
   const [selected, setSelected] = useState<BookingCall | null>(null);
 
+  // Group bookings by day of bookingDate
   const byDay = new Map<number, BookingCall[]>();
   for (const b of bookings) {
-    const day = new Date(b.startedAt).getDate();
+    if (!b.bookingDate) continue;
+    const day = new Date(b.bookingDate).getDate();
     byDay.set(day, [...(byDay.get(day) ?? []), b]);
   }
 
   const firstDay = new Date(year, month - 1, 1);
   const daysInMonth = new Date(year, month, 0).getDate();
-  const startWeekday = (firstDay.getDay() + 6) % 7;
+  const startWeekday = (firstDay.getDay() + 6) % 7; // Monday = 0
 
   const now = new Date();
   const isCurrentMonth = now.getFullYear() === year && now.getMonth() + 1 === month;
@@ -96,7 +103,10 @@ export function BookingsCalendar({ year, month, bookings }: Props) {
           const dayBookings = day ? (byDay.get(day) ?? []) : [];
           const isToday = isCurrentMonth && day === now.getDate();
           return (
-            <div key={i} className={`min-h-[90px] border-r border-b border-gray-100 p-1.5 flex flex-col ${!day ? "bg-gray-50/50" : ""}`}>
+            <div
+              key={i}
+              className={`min-h-[90px] border-r border-b border-gray-100 p-1.5 flex flex-col ${!day ? "bg-gray-50/50" : ""}`}
+            >
               {day && (
                 <>
                   <span className={`text-xs font-medium mb-1 w-6 h-6 flex items-center justify-center rounded-full self-center ${isToday ? "bg-black text-white" : "text-gray-500"}`}>
@@ -104,14 +114,20 @@ export function BookingsCalendar({ year, month, bookings }: Props) {
                   </span>
                   <div className="space-y-0.5">
                     {dayBookings.slice(0, 2).map((b) => (
-                      <button key={b.id} onClick={() => setSelected(b)}
-                        className="w-full text-left text-xs px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition truncate">
-                        {formatTime(b.startedAt)} {b.fromNumber ?? "–"}
+                      <button
+                        key={b.id}
+                        onClick={() => setSelected(b)}
+                        className="w-full text-left text-xs px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition truncate"
+                      >
+                        {b.bookingDate && formatTime(b.bookingDate)}{" "}
+                        {b.customerName ?? "Buchung"}
                       </button>
                     ))}
                     {dayBookings.length > 2 && (
-                      <button onClick={() => setSelected(dayBookings[2])}
-                        className="text-xs text-gray-400 hover:text-gray-600 pl-1">
+                      <button
+                        onClick={() => setSelected(dayBookings[2])}
+                        className="text-xs text-gray-400 hover:text-gray-600 pl-1"
+                      >
                         +{dayBookings.length - 2} weitere
                       </button>
                     )}
@@ -123,20 +139,46 @@ export function BookingsCalendar({ year, month, bookings }: Props) {
         })}
       </div>
 
+      {bookings.length === 0 && (
+        <p className="text-sm text-gray-400 text-center py-6">Keine Buchungen in diesem Monat</p>
+      )}
+
       {/* Detail Modal */}
       {selected && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setSelected(null)}>
-          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+          onClick={() => setSelected(null)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-semibold text-gray-900">Buchung</h3>
+              <h3 className="text-base font-semibold text-gray-900">Buchungsdetails</h3>
               <button onClick={() => setSelected(null)} className="text-gray-400 hover:text-gray-600 text-lg leading-none">×</button>
             </div>
             <div className="grid grid-cols-2 gap-4 mb-4">
               {[
-                { icon: Calendar, label: "Zeitpunkt", value: formatDateTime(selected.startedAt) },
-                { icon: Phone, label: "Anrufer", value: selected.fromNumber ?? "–" },
-                { icon: Mic, label: "Assistent", value: selected.assistant?.name ?? "–" },
-                { icon: Clock, label: "Dauer", value: selected.durationSec ? formatDuration(selected.durationSec) : "–" },
+                {
+                  icon: Calendar,
+                  label: "Termin",
+                  value: selected.bookingDate ? formatDateTime(selected.bookingDate) : "–",
+                },
+                {
+                  icon: User,
+                  label: "Kunde",
+                  value: selected.customerName ?? selected.fromNumber ?? "–",
+                },
+                {
+                  icon: Mic,
+                  label: "Assistent",
+                  value: selected.assistant?.name ?? "–",
+                },
+                {
+                  icon: Clock,
+                  label: "Gesprächsdauer",
+                  value: selected.durationSec ? formatDuration(selected.durationSec) : "–",
+                },
               ].map(({ icon: Icon, label, value }) => (
                 <div key={label} className="flex items-start gap-2">
                   <div className="w-7 h-7 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">

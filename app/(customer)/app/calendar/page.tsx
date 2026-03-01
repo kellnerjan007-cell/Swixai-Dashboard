@@ -55,10 +55,10 @@ export default async function CalendarPage({
         where: {
           workspaceId: membership.workspaceId,
           bookingStatus: "booked",
-          startedAt: { gte: new Date(year, month - 1, 1), lt: new Date(year, month, 1) },
+          bookingDate: { gte: new Date(year, month - 1, 1), lt: new Date(year, month, 1) },
         },
         include: { assistant: { select: { name: true } } },
-        orderBy: { startedAt: "asc" },
+        orderBy: { bookingDate: "asc" },
       })
     : [];
 

@@ -187,6 +187,9 @@ export async function POST(req: NextRequest) {
       const bookingStatus =
         (structured?.bookingStatus as string | undefined) ??
         (successEval === "true" || successEval === "1" ? "booked" : null);
+      const customerName = (structured?.customerName as string | undefined) ?? null;
+      const bookingDateRaw = structured?.bookingDate as string | undefined;
+      const bookingDate = bookingDateRaw ? new Date(bookingDateRaw) : null;
 
       const callData = {
         workspaceId,
@@ -204,6 +207,8 @@ export async function POST(req: NextRequest) {
         transcriptText: message.transcript,
         intent,
         bookingStatus,
+        customerName,
+        bookingDate,
       };
 
       const existing = await db.call.findFirst({ where: { providerCallId: vapiCallId } });

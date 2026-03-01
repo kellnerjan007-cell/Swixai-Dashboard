@@ -48,6 +48,9 @@ export async function POST() {
     const bookingStatus =
       (structured?.bookingStatus as string | undefined) ??
       (successEval === "true" || successEval === "1" ? "booked" : null);
+    const customerName = (structured?.customerName as string | undefined) ?? null;
+    const bookingDateRaw = structured?.bookingDate as string | undefined;
+    const bookingDate = bookingDateRaw ? new Date(bookingDateRaw) : null;
 
     const data = {
       workspaceId: workspace.id,
@@ -67,6 +70,8 @@ export async function POST() {
       transcriptText: vc.transcript ?? null,
       intent,
       bookingStatus,
+      customerName,
+      bookingDate,
     };
 
     const existing = await db.call.findFirst({ where: { providerCallId: vc.id } });

@@ -150,6 +150,8 @@ model Call {
   tags              String[]  @default([])
   intent            String?
   bookingStatus     String?
+  bookingDate       DateTime?
+  customerName      String?
   createdAt         DateTime  @default(now())
 
   workspace Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
