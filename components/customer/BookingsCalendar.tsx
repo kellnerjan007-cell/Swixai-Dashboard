@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, ChevronRight, User, Mic, Clock, Calendar } from "lucide-react";
+import { ChevronLeft, ChevronRight, User, Mic, Clock, Calendar, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 
@@ -41,7 +41,6 @@ export function BookingsCalendar({ year, month, bookings }: Props) {
   const router = useRouter();
   const [selected, setSelected] = useState<BookingCall | null>(null);
 
-  // Group bookings by day of bookingDate
   const byDay = new Map<number, BookingCall[]>();
   for (const b of bookings) {
     if (!b.bookingDate) continue;
@@ -51,7 +50,8 @@ export function BookingsCalendar({ year, month, bookings }: Props) {
 
   const firstDay = new Date(year, month - 1, 1);
   const daysInMonth = new Date(year, month, 0).getDate();
-  const startWeekday = (firstDay.getDay() + 6) % 7; // Monday = 0
+  // Monday-first: Sunday=0 becomes 6, Mon=1 becomes 0, etc.
+  const startWeekday = (firstDay.getDay() + 6) % 7;
 
   const now = new Date();
   const isCurrentMonth = now.getFullYear() === year && now.getMonth() + 1 === month;
@@ -70,11 +70,13 @@ export function BookingsCalendar({ year, month, bookings }: Props) {
   ];
   while (cells.length % 7 !== 0) cells.push(null);
 
+  const rows = cells.length / 7;
+
   return (
     <>
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-base font-semibold text-gray-900 capitalize">{monthLabel}</h2>
+        <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100 capitalize">{monthLabel}</h2>
         <div className="flex items-center gap-1">
           <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
             <ChevronLeft className="w-4 h-4" />
@@ -90,34 +92,51 @@ export function BookingsCalendar({ year, month, bookings }: Props) {
         </div>
       </div>
 
-      {/* Weekday headers */}
-      <div className="grid grid-cols-7 mb-1">
+      {/* Calendar grid */}
+      <div className="w-full" style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)" }}>
+        {/* Weekday headers */}
         {weekdays.map((d) => (
-          <div key={d} className="text-center text-xs font-semibold text-gray-400 py-2">{d}</div>
+          <div key={d} className="text-center text-xs font-semibold text-gray-400 dark:text-gray-500 py-2 border-b border-gray-100 dark:border-gray-800">
+            {d}
+          </div>
         ))}
-      </div>
 
-      {/* Grid */}
-      <div className="grid grid-cols-7 border-l border-t border-gray-100">
+        {/* Day cells */}
         {cells.map((day, i) => {
           const dayBookings = day ? (byDay.get(day) ?? []) : [];
           const isToday = isCurrentMonth && day === now.getDate();
+          const colIndex = i % 7;
+          const isWeekend = colIndex >= 5;
           return (
             <div
               key={i}
-              className={`min-h-[90px] border-r border-b border-gray-100 p-1.5 flex flex-col ${!day ? "bg-gray-50/50" : ""}`}
+              className={[
+                "border-b border-r border-gray-100 dark:border-gray-800 p-1.5 flex flex-col",
+                // first cell in each row gets left border
+                colIndex === 0 ? "border-l border-gray-100 dark:border-gray-800" : "",
+                !day
+                  ? "bg-gray-50/60 dark:bg-gray-800/20"
+                  : isWeekend
+                  ? "bg-gray-50/40 dark:bg-gray-800/10"
+                  : "bg-white dark:bg-gray-900",
+              ].join(" ")}
+              style={{ minHeight: `${Math.round(400 / rows)}px` }}
             >
               {day && (
                 <>
-                  <span className={`text-xs font-medium mb-1 w-6 h-6 flex items-center justify-center rounded-full self-center ${isToday ? "bg-black text-white" : "text-gray-500"}`}>
+                  <span className={`text-xs font-medium mb-1 w-6 h-6 flex items-center justify-center rounded-full self-start ${
+                    isToday
+                      ? "bg-black dark:bg-white text-white dark:text-gray-900 font-bold"
+                      : "text-gray-500 dark:text-gray-400"
+                  }`}>
                     {day}
                   </span>
-                  <div className="space-y-0.5">
+                  <div className="space-y-0.5 flex-1">
                     {dayBookings.slice(0, 2).map((b) => (
                       <button
                         key={b.id}
                         onClick={() => setSelected(b)}
-                        className="w-full text-left text-xs px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition truncate"
+                        className="w-full text-left text-xs px-1.5 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900 transition truncate"
                       >
                         {b.bookingDate && formatTime(b.bookingDate)}{" "}
                         {b.customerName ?? "Buchung"}
@@ -126,9 +145,9 @@ export function BookingsCalendar({ year, month, bookings }: Props) {
                     {dayBookings.length > 2 && (
                       <button
                         onClick={() => setSelected(dayBookings[2])}
-                        className="text-xs text-gray-400 hover:text-gray-600 pl-1"
+                        className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 pl-1"
                       >
-                        +{dayBookings.length - 2} weitere
+                        +{dayBookings.length - 2} mehr
                       </button>
                     )}
                   </div>
@@ -140,58 +159,47 @@ export function BookingsCalendar({ year, month, bookings }: Props) {
       </div>
 
       {bookings.length === 0 && (
-        <p className="text-sm text-gray-400 text-center py-6">Keine Buchungen in diesem Monat</p>
+        <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-4">Keine Buchungen in diesem Monat</p>
       )}
 
       {/* Detail Modal */}
       {selected && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
           onClick={() => setSelected(null)}
         >
           <div
-            className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4"
+            className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 p-6 w-full max-w-sm"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-semibold text-gray-900">Buchungsdetails</h3>
-              <button onClick={() => setSelected(null)} className="text-gray-400 hover:text-gray-600 text-lg leading-none">×</button>
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">Buchungsdetails</h3>
+              <button
+                onClick={() => setSelected(null)}
+                className="p-1 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
-            <div className="grid grid-cols-2 gap-4 mb-4">
+            <div className="grid grid-cols-2 gap-4 mb-5">
               {[
-                {
-                  icon: Calendar,
-                  label: "Termin",
-                  value: selected.bookingDate ? formatDateTime(selected.bookingDate) : "–",
-                },
-                {
-                  icon: User,
-                  label: "Kunde",
-                  value: selected.customerName ?? selected.fromNumber ?? "–",
-                },
-                {
-                  icon: Mic,
-                  label: "Assistent",
-                  value: selected.assistant?.name ?? "–",
-                },
-                {
-                  icon: Clock,
-                  label: "Gesprächsdauer",
-                  value: selected.durationSec ? formatDuration(selected.durationSec) : "–",
-                },
+                { icon: Calendar, label: "Termin", value: selected.bookingDate ? formatDateTime(selected.bookingDate) : "–" },
+                { icon: User, label: "Kunde", value: selected.customerName ?? selected.fromNumber ?? "–" },
+                { icon: Mic, label: "Assistent", value: selected.assistant?.name ?? "–" },
+                { icon: Clock, label: "Gesprächsdauer", value: selected.durationSec ? formatDuration(selected.durationSec) : "–" },
               ].map(({ icon: Icon, label, value }) => (
                 <div key={label} className="flex items-start gap-2">
-                  <div className="w-7 h-7 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <Icon className="w-3.5 h-3.5 text-gray-500" />
+                  <div className="w-7 h-7 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <Icon className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" />
                   </div>
                   <div>
-                    <p className="text-xs text-gray-400">{label}</p>
-                    <p className="text-sm font-medium text-gray-900">{value}</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500">{label}</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{value}</p>
                   </div>
                 </div>
               ))}
             </div>
-            <div className="pt-3 border-t border-gray-100 flex items-center gap-3">
+            <div className="pt-3 border-t border-gray-100 dark:border-gray-800">
               <Badge variant="green">Gebucht</Badge>
             </div>
           </div>

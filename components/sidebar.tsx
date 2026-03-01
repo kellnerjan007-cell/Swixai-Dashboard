@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutGrid, UserRound, BookOpen, Phone, PhoneCall } from "lucide-react";
+import { LayoutGrid, UserRound, BookOpen, Phone, PhoneCall, LifeBuoy } from "lucide-react";
 
 function Item({
   href,
@@ -59,6 +59,14 @@ export default function Sidebar() {
           href="/calls"
           label="Anrufverlauf"
           icon={<PhoneCall className="w-6 h-6" />}
+        />
+      </div>
+
+      <div className="mt-10 space-y-4">
+        <Item
+          href="/support"
+          label="Hilfe & Support"
+          icon={<LifeBuoy className="w-6 h-6" />}
         />
       </div>
     </aside>

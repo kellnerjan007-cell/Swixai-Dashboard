@@ -23,7 +23,6 @@ const PLANS = [
       "E-Mail Support",
     ],
     popular: false,
-    ctaLabel: "Kontakt aufnehmen",
   },
   {
     key: "pro",
@@ -40,7 +39,6 @@ const PLANS = [
       "Mehrsprachigkeit inklusive",
     ],
     popular: true,
-    ctaLabel: "Upgrade auf Pro",
   },
   {
     key: "business",
@@ -57,7 +55,6 @@ const PLANS = [
       "Custom Branding & Vanity Number",
     ],
     popular: false,
-    ctaLabel: "Kontakt aufnehmen",
   },
 ] as const;
 
@@ -280,10 +277,10 @@ export default async function BillingPage({
                     </div>
                   ) : (
                     <a
-                      href={`mailto:office@swixai.info?subject=${encodeURIComponent(`Interesse: ${plan.label}-Plan`)}&body=${encodeURIComponent(`Hallo,\n\nich interessiere mich für den ${plan.label}-Plan (${plan.price} CHF/Monat).\n\nWorkspace: ${workspace?.name ?? ""}\n\nBitte meldet euch bei mir.\n\nViele Grüße`)}`}
+                      href={`mailto:office@swixai.info?subject=${encodeURIComponent(`Planwechsel zu ${plan.label}`)}&body=${encodeURIComponent(`Hallo,\n\nich möchte zu ${plan.label}-Plan (${plan.price} CHF/Monat) wechseln.\n\nWorkspace: ${workspace?.name ?? ""}\n\nBitte meldet euch bei mir.\n\nViele Grüße`)}`}
                       className="mt-2 block text-center text-sm font-medium py-2.5 rounded-xl bg-gray-900 text-white hover:bg-gray-700 transition-colors"
                     >
-                      {plan.ctaLabel}
+                      {`Zu ${plan.label} wechseln`}
                     </a>
                   )}
                 </div>

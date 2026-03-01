@@ -16,6 +16,7 @@ import {
   Mic,
   Shield,
   Users,
+  LifeBuoy,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -128,6 +129,8 @@ export function CustomerSidebar({ workspaceName, isAdmin }: CustomerSidebarProps
 
       {/* Footer */}
       <div className="px-3 py-4 border-t border-gray-100 dark:border-gray-800 space-y-1">
+        <NavItem href="/app/support" label="Hilfe & Support" icon={LifeBuoy} />
+
         {/* Admin-Panel-Button: nur für Admins sichtbar */}
         {isAdmin && (
           <Link
