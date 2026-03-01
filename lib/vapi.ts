@@ -285,7 +285,9 @@ export async function fetchVapiCalls(
     const text = await res.text();
     throw new Error(`Vapi fetch calls failed (${res.status}): ${text}`);
   }
-  return res.json() as Promise<VapiCallRecord[]>;
+  const raw = await res.json();
+  // Vapi may return plain array or paginated { results: [...] }
+  return (Array.isArray(raw) ? raw : (raw.results ?? raw.data ?? [])) as VapiCallRecord[];
 }
 
 /** Fetches all assistants from a Vapi account (used in Settings to preview connection) */

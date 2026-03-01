@@ -36,15 +36,11 @@ export async function POST() {
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 
-  // Filter to only calls belonging to our workspace's assistants
-  const relevantCalls = vapiCalls.filter(
-    (c) => c.assistantId && vapiIdToAssistantId.has(c.assistantId)
-  );
-
   let synced = 0;
 
-  for (const vc of relevantCalls) {
-    const assistantId = vapiIdToAssistantId.get(vc.assistantId!)!;
+  for (const vc of vapiCalls) {
+    // Match to local assistant if possible, otherwise still import the call
+    const assistantId = vc.assistantId ? (vapiIdToAssistantId.get(vc.assistantId) ?? null) : null;
 
     const structured = vc.analysis?.structuredData as Record<string, unknown> | undefined;
     const intent = (structured?.intent as string | undefined) ?? null;
