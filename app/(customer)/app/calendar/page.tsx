@@ -6,27 +6,36 @@ import { Topbar } from "@/components/customer/Topbar";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { BookingsCalendar } from "@/components/customer/BookingsCalendar";
 import { formatDate } from "@/lib/utils";
-import { CalendarDays, CheckCircle2, AlertCircle, ExternalLink, RefreshCw } from "lucide-react";
+import { CalendarDays, CheckCircle2, AlertCircle, ExternalLink } from "lucide-react";
 
 const ERROR_MESSAGES: Record<string, string> = {
-  no_client_id: "Google Client ID ist nicht konfiguriert. Trage GOOGLE_CLIENT_ID in die .env ein.",
+  no_client_id: "Google Client ID ist nicht konfiguriert.",
+  no_ms_client_id: "Microsoft Client ID nicht konfiguriert. Trage MICROSOFT_CLIENT_ID in die .env ein.",
   access_denied: "Google-Zugriff wurde verweigert.",
-  token_exchange: "Fehler beim Verbinden mit Google. Bitte erneut versuchen.",
+  ms_access_denied: "Microsoft-Zugriff wurde verweigert.",
+  token_exchange: "Google-Verbindungsfehler. Bitte erneut versuchen.",
+  ms_token_exchange: "Microsoft-Verbindungsfehler. Bitte erneut versuchen.",
   no_workspace: "Kein Workspace gefunden.",
 };
 
 export default async function CalendarPage({
   searchParams,
 }: {
-  searchParams: Promise<{ success?: string; error?: string }>;
+  searchParams: Promise<{ success?: string; error?: string; month?: string }>;
 }) {
   const session = await getServerSession(authOptions);
   if (!session) redirect("/login");
 
   const params = await searchParams;
-  const connectSuccess = params.success === "1";
-  const connectError = params.error;
+  const now = new Date();
+  let year = now.getFullYear();
+  let month = now.getMonth() + 1;
+  if (params.month && /^\d{4}-\d{2}$/.test(params.month)) {
+    const [y, m] = params.month.split("-").map(Number);
+    if (y >= 2020 && y <= 2100 && m >= 1 && m <= 12) { year = y; month = m; }
+  }
 
   const membership = await db.membership.findFirst({
     where: { userId: session.user.id },
@@ -34,160 +43,101 @@ export default async function CalendarPage({
     orderBy: { createdAt: "asc" },
   });
 
-  const connection = membership
-    ? await db.calendarConnection.findFirst({
-        where: { workspaceId: membership.workspaceId },
-        orderBy: { connectedAt: "desc" },
-      })
-    : null;
+  const connections = membership
+    ? await db.calendarConnection.findMany({ where: { workspaceId: membership.workspaceId } })
+    : [];
 
-  const recentBookings = membership
+  const googleConn = connections.find((c) => c.provider === "GOOGLE") ?? null;
+  const msConn = connections.find((c) => c.provider === "MICROSOFT") ?? null;
+
+  const bookings = membership
     ? await db.call.findMany({
-        where: { workspaceId: membership.workspaceId, bookingStatus: "booked" },
-        orderBy: { startedAt: "desc" },
-        take: 5,
+        where: {
+          workspaceId: membership.workspaceId,
+          bookingStatus: "booked",
+          startedAt: { gte: new Date(year, month - 1, 1), lt: new Date(year, month, 1) },
+        },
         include: { assistant: { select: { name: true } } },
+        orderBy: { startedAt: "asc" },
       })
     : [];
 
-  const isConnected = !!connection;
-
   return (
     <>
-      <Topbar title="Google Kalender" subtitle="Kalender-Integration" />
+      <Topbar title="Kalender" subtitle={`${bookings.length} Buchung${bookings.length !== 1 ? "en" : ""} diesen Monat`} />
       <main className="flex-1 px-8 py-8 space-y-6">
-        {connectSuccess && (
+
+        {params.success && (
           <div className="flex items-center gap-3 bg-emerald-50 border border-emerald-200 rounded-2xl px-5 py-4">
             <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-            <p className="text-sm font-medium text-emerald-800">Google Kalender erfolgreich verbunden!</p>
+            <p className="text-sm font-medium text-emerald-800">
+              {params.success === "microsoft" ? "Microsoft Outlook erfolgreich verbunden!" : "Google Kalender erfolgreich verbunden!"}
+            </p>
           </div>
         )}
-        {connectError && (
+
+        {params.error && (
           <div className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-2xl px-5 py-4">
             <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
-            <p className="text-sm text-red-700">{ERROR_MESSAGES[connectError] ?? connectError}</p>
+            <p className="text-sm text-red-700">{ERROR_MESSAGES[params.error] ?? params.error}</p>
           </div>
         )}
-        {/* Connection Status */}
-        <Card>
-          <div className="flex items-start justify-between">
-            <div className="flex items-start gap-4">
-              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${isConnected ? "bg-emerald-50" : "bg-gray-100"}`}>
-                <CalendarDays className={`w-6 h-6 ${isConnected ? "text-emerald-600" : "text-gray-400"}`} />
-              </div>
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <h2 className="text-base font-semibold text-gray-900">Google Kalender</h2>
-                  <Badge variant={isConnected ? "green" : "gray"}>
-                    {isConnected ? (
-                      <><CheckCircle2 className="w-3 h-3" /> Verbunden</>
-                    ) : (
-                      "Nicht verbunden"
-                    )}
-                  </Badge>
-                </div>
-                {isConnected ? (
-                  <>
-                    <p className="text-sm text-gray-500">
-                      Kalender-ID: <span className="font-mono">{connection.calendarId ?? "–"}</span>
-                    </p>
-                    <p className="text-xs text-gray-400 mt-0.5">
-                      Verbunden seit: {formatDate(connection.connectedAt)}
-                    </p>
-                  </>
-                ) : (
-                  <p className="text-sm text-gray-500">
-                    Verbinde deinen Google Kalender, damit Assistenten Termine buchen können.
-                  </p>
-                )}
-              </div>
-            </div>
 
-            <div className="flex gap-2">
-              {isConnected ? (
-                <>
-                  <a href="/app/calendar">
-                    <Button variant="secondary" size="sm">
-                      <RefreshCw className="w-4 h-4" />
-                      Sync
-                    </Button>
-                  </a>
-                  <form action="/api/calendar/disconnect" method="POST">
-                    <Button variant="ghost" size="sm" type="submit">
-                      Trennen
-                    </Button>
-                  </form>
-                </>
-              ) : (
-                <a href="/api/calendar/connect">
-                  <Button size="sm">
-                    <ExternalLink className="w-4 h-4" />
-                    Mit Google verbinden
-                  </Button>
-                </a>
-              )}
-            </div>
-          </div>
-        </Card>
-
-        {/* Setup Instructions (when not connected) */}
-        {!isConnected && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Card>
-            <div className="flex items-start gap-3 mb-4">
-              <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
-              <h2 className="text-base font-semibold text-gray-900">Setup-Anleitung</h2>
-            </div>
-            <ol className="space-y-3 text-sm text-gray-600">
-              {[
-                'Öffne die Google Cloud Console → APIs & Services → OAuth 2.0',
-                'Erstelle ein OAuth 2.0 Client ID (Web Application)',
-                `Authorized redirect URI: ${process.env.NEXTAUTH_URL ?? "http://localhost:3000"}/api/calendar/callback`,
-                'Kopiere GOOGLE_CLIENT_ID und GOOGLE_CLIENT_SECRET in deine .env Datei',
-                'Aktiviere die Google Calendar API in deiner Cloud Console',
-                'Klicke dann auf "Mit Google verbinden" oben',
-              ].map((step, i) => (
-                <li key={i} className="flex items-start gap-3">
-                  <span className="w-5 h-5 bg-gray-900 text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
-                    {i + 1}
-                  </span>
-                  <span>{step}</span>
-                </li>
-              ))}
-            </ol>
+            <ProviderCard label="Google Kalender" connected={!!googleConn}
+              calendarId={googleConn?.calendarId ?? null} connectedAt={googleConn?.connectedAt ?? null}
+              connectHref="/api/calendar/connect" disconnectAction="/api/calendar/disconnect?provider=GOOGLE" />
           </Card>
-        )}
+          <Card>
+            <ProviderCard label="Microsoft Outlook" connected={!!msConn}
+              calendarId={msConn?.calendarId ?? null} connectedAt={msConn?.connectedAt ?? null}
+              connectHref="/api/calendar/microsoft/connect" disconnectAction="/api/calendar/disconnect?provider=MICROSOFT" />
+          </Card>
+        </div>
 
-        {/* Recent Bookings */}
         <Card>
-          <h2 className="text-base font-semibold text-gray-900 mb-4">
-            Letzte Buchungen
-          </h2>
-          {recentBookings.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-8">
-              Noch keine Buchungen über den Assistenten
-            </p>
-          ) : (
-            <div className="space-y-3">
-              {recentBookings.map((call) => (
-                <div
-                  key={call.id}
-                  className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0"
-                >
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">
-                      {call.fromNumber ?? "Unbekannt"}
-                    </p>
-                    <p className="text-xs text-gray-400">
-                      via {call.assistant?.name ?? "–"} · {formatDate(call.startedAt)}
-                    </p>
-                  </div>
-                  <Badge variant="green">Gebucht</Badge>
-                </div>
-              ))}
-            </div>
-          )}
+          <BookingsCalendar year={year} month={month} bookings={bookings} />
         </Card>
+
       </main>
     </>
+  );
+}
+
+function ProviderCard({ label, connected, calendarId, connectedAt, connectHref, disconnectAction }: {
+  label: string; connected: boolean; calendarId: string | null;
+  connectedAt: Date | null; connectHref: string; disconnectAction: string;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-4">
+      <div className="flex items-start gap-3">
+        <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${connected ? "bg-emerald-50" : "bg-gray-100"}`}>
+          <CalendarDays className={`w-5 h-5 ${connected ? "text-emerald-600" : "text-gray-400"}`} />
+        </div>
+        <div>
+          <div className="flex items-center gap-2 mb-0.5">
+            <h3 className="text-sm font-semibold text-gray-900">{label}</h3>
+            <Badge variant={connected ? "green" : "gray"}>
+              {connected ? <><CheckCircle2 className="w-3 h-3" />Verbunden</> : "Nicht verbunden"}
+            </Badge>
+          </div>
+          {connected && calendarId && <p className="text-xs font-mono text-gray-400 truncate max-w-[180px]">{calendarId}</p>}
+          {connected && connectedAt && <p className="text-xs text-gray-400">Seit {formatDate(connectedAt)}</p>}
+          {!connected && <p className="text-xs text-gray-500">Nicht verbunden</p>}
+        </div>
+      </div>
+      <div className="flex-shrink-0">
+        {connected ? (
+          <form action={disconnectAction} method="POST">
+            <Button variant="ghost" size="sm" type="submit">Trennen</Button>
+          </form>
+        ) : (
+          <a href={connectHref}>
+            <Button size="sm"><ExternalLink className="w-3.5 h-3.5" />Verbinden</Button>
+          </a>
+        )}
+      </div>
+    </div>
   );
 }

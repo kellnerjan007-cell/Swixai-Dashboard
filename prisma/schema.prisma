@@ -159,16 +159,18 @@ model Call {
 }
 
 model CalendarConnection {
-  id           String   @id @default(cuid())
-  workspaceId  String
-  provider     String   @default("GOOGLE")
-  accessToken  String
-  refreshToken String?
-  calendarId   String?
-  connectedAt  DateTime @default(now())
+  id             String    @id @default(cuid())
+  workspaceId    String
+  provider       String    @default("GOOGLE")
+  accessToken    String
+  refreshToken   String?
+  calendarId     String?
+  tokenExpiresAt DateTime?
+  connectedAt    DateTime  @default(now())
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
+  @@unique([workspaceId, provider])
   @@map("calendar_connections")
 }
 

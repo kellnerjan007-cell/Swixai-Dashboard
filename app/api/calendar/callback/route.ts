@@ -66,18 +66,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(new URL("/app/calendar?error=no_workspace", req.url));
   }
 
-  // Delete any existing connection for this workspace, then create new
-  await db.calendarConnection.deleteMany({ where: { workspaceId: membership.workspaceId } });
-  await db.calendarConnection.create({
-    data: {
-      workspaceId: membership.workspaceId,
-      provider: "GOOGLE",
-      accessToken: tokens.access_token,
-      refreshToken: tokens.refresh_token ?? null,
-      calendarId,
-      connectedAt: new Date(),
-    },
+  await db.calendarConnection.upsert({
+    where: { workspaceId_provider: { workspaceId: membership.workspaceId, provider: "GOOGLE" } },
+    update: { accessToken: tokens.access_token, refreshToken: tokens.refresh_token ?? null, calendarId, connectedAt: new Date() },
+    create: { workspaceId: membership.workspaceId, provider: "GOOGLE", accessToken: tokens.access_token, refreshToken: tokens.refresh_token ?? null, calendarId },
   });
 
-  return NextResponse.redirect(new URL("/app/calendar?success=1", req.url));
+  return NextResponse.redirect(new URL("/app/calendar?success=google", req.url));
 }

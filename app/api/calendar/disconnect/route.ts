@@ -14,8 +14,10 @@ export async function POST(req: NextRequest) {
   });
 
   if (membership) {
+    const { searchParams } = new URL(req.url);
+    const provider = (searchParams.get("provider") ?? "GOOGLE").toUpperCase();
     await db.calendarConnection.deleteMany({
-      where: { workspaceId: membership.workspaceId },
+      where: { workspaceId: membership.workspaceId, provider },
     });
   }
 
