@@ -1,72 +1,74 @@
 "use client";
 
 import { useState, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Loader2, Mic, CheckCircle } from "lucide-react";
+import { Loader2, Mic } from "lucide-react";
 
 function ResetPasswordForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token") ?? "";
+  const router = useRouter();
 
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
-  const [done, setDone] = useState(false);
   const [error, setError] = useState("");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (password !== confirm) {
-      setError("Die Passwörter stimmen nicht überein.");
-      return;
-    }
-    setLoading(true);
     setError("");
 
-    const res = await fetch("/api/auth/reset-password", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token, password }),
-    });
+    if (password !== confirm) {
+      setError("Passwörter stimmen nicht überein");
+      return;
+    }
+    if (password.length < 8) {
+      setError("Passwort muss mindestens 8 Zeichen haben");
+      return;
+    }
 
-    const data = await res.json();
-    setLoading(false);
-
-    if (!res.ok) {
-      setError(data.error ?? "Fehler beim Zurücksetzen.");
-    } else {
-      setDone(true);
-      setTimeout(() => router.push("/login"), 3000);
+    setLoading(true);
+    try {
+      const res = await fetch("/api/auth/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token, password }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        router.push("/login?reset=1");
+      } else {
+        setError(data.error ?? "Fehler – bitte erneut versuchen");
+      }
+    } catch {
+      setError("Netzwerkfehler – bitte erneut versuchen");
+    } finally {
+      setLoading(false);
     }
   }
 
   if (!token) {
     return (
-      <div className="text-center py-4">
-        <p className="text-red-600 text-sm">Ungültiger Link.</p>
-        <Link href="/forgot-password" className="mt-4 inline-block text-sm text-black font-semibold hover:underline">
+      <div className="text-center space-y-4">
+        <p className="text-red-600 text-sm">Link ungültig. Bitte erneut anfordern.</p>
+        <Link href="/forgot-password" className="text-sm font-semibold text-black hover:underline">
           Neuen Link anfordern
         </Link>
       </div>
     );
   }
 
-  return done ? (
-    <div className="text-center py-4">
-      <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-4" />
-      <h1 className="text-xl font-bold text-gray-900 mb-2">Passwort gesetzt!</h1>
-      <p className="text-gray-500 text-sm">Du wirst in Kürze zum Login weitergeleitet.</p>
-    </div>
-  ) : (
+  return (
     <>
       <h1 className="text-2xl font-bold text-gray-900 mb-2">Neues Passwort</h1>
-      <p className="text-gray-500 text-sm mb-6">Wähle ein neues Passwort für dein Konto.</p>
+      <p className="text-gray-500 text-sm mb-6">Lege ein neues Passwort für dein Konto fest.</p>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">Neues Passwort</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">
+            Neues Passwort
+          </label>
           <input
             type="password"
             value={password}
@@ -77,13 +79,16 @@ function ResetPasswordForm() {
             className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-black/20 focus:border-black transition"
           />
         </div>
+
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">Passwort bestätigen</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">
+            Passwort bestätigen
+          </label>
           <input
             type="password"
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}
-            placeholder="••••••••"
+            placeholder="Passwort wiederholen"
             required
             className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-black/20 focus:border-black transition"
           />
@@ -119,7 +124,7 @@ export default function ResetPasswordPage() {
           <span className="text-2xl font-bold text-gray-900">SwixAI</span>
         </div>
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
-          <Suspense fallback={<div className="text-center py-4 text-gray-400">Laden...</div>}>
+          <Suspense fallback={<div className="text-center text-gray-400">Laden…</div>}>
             <ResetPasswordForm />
           </Suspense>
         </div>

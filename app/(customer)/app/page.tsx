@@ -9,26 +9,12 @@ import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { formatCurrency } from "@/lib/utils";
 import { PhoneCall, Clock, Euro, Zap, CheckCircle2, Activity } from "lucide-react";
-
-// ─── Dummy Data (used until real provider integration) ─────────────────────
-const callsPerDay = [
-  { day: "01.02", calls: 8, cost: 2.4 },
-  { day: "02.02", calls: 14, cost: 4.2 },
-  { day: "03.02", calls: 11, cost: 3.3 },
-  { day: "04.02", calls: 19, cost: 5.7 },
-  { day: "05.02", calls: 7, cost: 2.1 },
-  { day: "06.02", calls: 22, cost: 6.6 },
-  { day: "07.02", calls: 16, cost: 4.8 },
-  { day: "08.02", calls: 18, cost: 5.4 },
-  { day: "09.02", calls: 12, cost: 3.6 },
-  { day: "10.02", calls: 24, cost: 7.2 },
-];
+import { SetupGuide } from "@/components/customer/SetupGuide";
 
 export default async function CustomerHomePage() {
   const session = await getServerSession(authOptions);
   if (!session) redirect("/login");
 
-  // Fetch workspace
   const membership = await db.membership.findFirst({
     where: { userId: session.user.id },
     include: {
@@ -36,14 +22,7 @@ export default async function CustomerHomePage() {
         include: {
           billing: true,
           assistants: { select: { id: true, status: true } },
-          calls: {
-            where: {
-              startedAt: {
-                gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
-              },
-            },
-            select: { durationSec: true, costTotal: true, outcome: true },
-          },
+          calendarConnections: { select: { id: true } },
         },
       },
     },
@@ -51,59 +30,142 @@ export default async function CustomerHomePage() {
   });
 
   const workspace = membership?.workspace;
-  const calls = workspace?.calls ?? [];
   const billing = workspace?.billing;
   const assistants = workspace?.assistants ?? [];
+  const calendarConnected = (workspace?.calendarConnections?.length ?? 0) > 0;
 
-  // KPI calculations
-  const totalCalls = calls.length;
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  // Calls this month for KPIs
+  const monthCalls = workspace
+    ? await db.call.findMany({
+        where: { workspaceId: workspace.id, startedAt: { gte: monthStart } },
+        select: { durationSec: true, costTotal: true, outcome: true },
+      })
+    : [];
+
+  // Calls last 14 days for charts — grouped by day
+  const chartStart = new Date(now);
+  chartStart.setDate(now.getDate() - 13);
+  chartStart.setHours(0, 0, 0, 0);
+
+  const recentCalls = workspace
+    ? await db.call.findMany({
+        where: { workspaceId: workspace.id, startedAt: { gte: chartStart } },
+        select: { startedAt: true, costTotal: true },
+        orderBy: { startedAt: "asc" },
+      })
+    : [];
+
+  // Build per-day buckets for last 14 days
+  const callsPerDay = Array.from({ length: 14 }, (_, i) => {
+    const d = new Date(chartStart);
+    d.setDate(chartStart.getDate() + i);
+    const dayStr = d.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" });
+
+    const dayStart = new Date(d);
+    dayStart.setHours(0, 0, 0, 0);
+    const dayEnd = new Date(d);
+    dayEnd.setHours(23, 59, 59, 999);
+
+    const dayCalls = recentCalls.filter(
+      (c) => new Date(c.startedAt) >= dayStart && new Date(c.startedAt) <= dayEnd
+    );
+
+    return {
+      day: dayStr,
+      calls: dayCalls.length,
+      cost: parseFloat(dayCalls.reduce((s, c) => s + (c.costTotal ?? 0), 0).toFixed(4)),
+    };
+  });
+
+  // KPI calculations from this month
+  const totalCalls = monthCalls.length;
   const totalMinutes = Math.round(
-    calls.reduce((s, c) => s + (c.durationSec ?? 0), 0) / 60
+    monthCalls.reduce((s, c) => s + (c.durationSec ?? 0), 0) / 60
   );
-  const totalCost = calls.reduce((s, c) => s + (c.costTotal ?? 0), 0);
+  const totalCost = monthCalls.reduce((s, c) => s + (c.costTotal ?? 0), 0);
   const successRate =
     totalCalls > 0
       ? Math.round(
-          (calls.filter((c) => c.outcome === "answered").length / totalCalls) * 100
+          (monthCalls.filter((c) => c.outcome === "answered").length / totalCalls) * 100
         )
       : 0;
   const avgDuration =
     totalCalls > 0
-      ? Math.round(calls.reduce((s, c) => s + (c.durationSec ?? 0), 0) / totalCalls)
+      ? Math.round(monthCalls.reduce((s, c) => s + (c.durationSec ?? 0), 0) / totalCalls)
       : 0;
   const activeAssistants = assistants.filter((a) => a.status === "ACTIVE").length;
   const creditsBalance = billing?.creditsBalance ?? 0;
+
+  // Setup guide state
+  const vapiKeySet = !!workspace?.vapiApiKey;
+  const hasAssistant = assistants.length > 0;
+  const hasCredits = creditsBalance > 0;
+  const showSetupGuide = !vapiKeySet || !hasAssistant || !hasCredits;
 
   return (
     <>
       <Topbar
         title="Übersicht"
-        subtitle={`${new Date().toLocaleString("de-DE", { month: "long", year: "numeric" })}`}
+        subtitle={`${now.toLocaleString("de-DE", { month: "long", year: "numeric" })}`}
       />
       <main className="flex-1 px-8 py-8 space-y-8">
+        {/* Onboarding guide — shown until all critical steps are done */}
+        {showSetupGuide && (
+          <SetupGuide
+            steps={[
+              {
+                title: "Vapi API Key hinterlegen",
+                description:
+                  "Verbinde deinen Vapi-Account, damit Anrufe, Kosten und Transkripte automatisch synchronisiert werden.",
+                href: "/app/settings",
+                done: vapiKeySet,
+              },
+              {
+                title: "Ersten Assistenten anlegen",
+                description:
+                  "Erstelle deinen ersten KI-Assistenten – gib ihm einen Namen, eine Sprache und einen System-Prompt.",
+                href: "/app/assistants/new",
+                done: hasAssistant,
+              },
+              {
+                title: "Guthaben aufladen",
+                description:
+                  "Lade Guthaben auf, damit Anrufe abgerechnet werden können.",
+                href: "/app/billing",
+                done: hasCredits,
+              },
+              {
+                title: "Kalender verbinden",
+                description:
+                  "Verbinde Google Calendar für automatische Terminbuchungen durch den Assistenten.",
+                href: "/app/calendar",
+                done: calendarConnected,
+                optional: true,
+              },
+            ]}
+          />
+        )}
+
         {/* KPI Grid */}
         <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
           <StatCard
             title="Anrufe"
             value={totalCalls.toString()}
-            trend="+12%"
-            trendDir="up"
             subtext="diesen Monat"
             icon={<PhoneCall className="w-4 h-4" />}
           />
           <StatCard
             title="Minuten"
             value={totalMinutes.toString()}
-            trend="+8%"
-            trendDir="up"
             subtext="diesen Monat"
             icon={<Clock className="w-4 h-4" />}
           />
           <StatCard
             title="Kosten"
             value={formatCurrency(totalCost)}
-            trend="+5%"
-            trendDir="down"
             subtext="diesen Monat"
             icon={<Euro className="w-4 h-4" />}
           />
@@ -116,25 +178,27 @@ export default async function CustomerHomePage() {
           />
           <StatCard
             title="Erfolgsrate"
-            value={`${successRate}%`}
-            trend="+3%"
-            trendDir="up"
+            value={totalCalls > 0 ? `${successRate}%` : "–"}
             subtext="Anrufe beantwortet"
             icon={<CheckCircle2 className="w-4 h-4" />}
           />
           <StatCard
             title="Ø Dauer"
-            value={`${Math.floor(avgDuration / 60)}:${String(avgDuration % 60).padStart(2, "0")}`}
+            value={
+              avgDuration > 0
+                ? `${Math.floor(avgDuration / 60)}:${String(avgDuration % 60).padStart(2, "0")}`
+                : "–"
+            }
             subtext="Minuten pro Anruf"
             icon={<Activity className="w-4 h-4" />}
           />
         </div>
 
-        {/* Charts */}
+        {/* Charts — real data from last 14 days */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <ChartCard
             title="Anrufe pro Tag"
-            subtitle="Letzten 10 Tage"
+            subtitle="Letzte 14 Tage"
             data={callsPerDay}
             dataKey="calls"
             xKey="day"
@@ -142,7 +206,7 @@ export default async function CustomerHomePage() {
           />
           <ChartCard
             title="Kosten pro Tag"
-            subtitle="in EUR, letzten 10 Tage"
+            subtitle="in EUR, letzte 14 Tage"
             data={callsPerDay}
             type="bar"
             dataKey="cost"
@@ -154,15 +218,17 @@ export default async function CustomerHomePage() {
 
         {/* System Health + Active Assistants */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Health */}
           <Card>
             <h2 className="text-base font-semibold text-gray-900 mb-4">System Status</h2>
             <div className="space-y-3">
               {[
-                { label: "Telefonie", ok: true },
-                { label: "Webhook Endpoint", ok: true },
+                { label: "Vapi Telefonie", ok: true },
                 { label: "KI Engine", ok: true },
-                { label: "Kalender-Sync", ok: false, hint: "Nicht verbunden" },
+                {
+                  label: "Kalender-Sync",
+                  ok: calendarConnected,
+                  hint: calendarConnected ? undefined : "Nicht verbunden",
+                },
               ].map((item) => (
                 <div key={item.label} className="flex items-center justify-between py-1">
                   <span className="text-sm text-gray-700">{item.label}</span>
@@ -179,7 +245,6 @@ export default async function CustomerHomePage() {
             </div>
           </Card>
 
-          {/* Quick stats */}
           <Card>
             <h2 className="text-base font-semibold text-gray-900 mb-4">Assistenten</h2>
             <div className="space-y-3">

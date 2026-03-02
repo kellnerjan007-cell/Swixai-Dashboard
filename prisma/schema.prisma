@@ -55,41 +55,15 @@ model User {
   @@map("users")
 }
 
-model PasswordResetToken {
-  id        String   @id @default(cuid())
-  userId    String
-  token     String   @unique
-  expiresAt DateTime
-  createdAt DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("password_reset_tokens")
-}
-
-model InviteToken {
-  id          String     @id @default(cuid())
-  workspaceId String
-  email       String
-  token       String     @unique
-  role        MemberRole @default(MEMBER)
-  invitedById String?
-  expiresAt   DateTime
-  createdAt   DateTime   @default(now())
-
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-
-  @@map("team_invites")
-}
-
 model Workspace {
-  id        String          @id @default(cuid())
-  name      String
-  slug      String          @unique
-  plan      String          @default("starter")
-  status    WorkspaceStatus @default(ACTIVE)
-  createdAt DateTime        @default(now())
-  updatedAt DateTime        @updatedAt
+  id         String          @id @default(cuid())
+  name       String
+  slug       String          @unique
+  plan       String          @default("starter")
+  status     WorkspaceStatus @default(ACTIVE)
+  vapiApiKey String?
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
 
   members             Membership[]
   assistants          Assistant[]
@@ -98,7 +72,7 @@ model Workspace {
   calendarConnections CalendarConnection[]
   billing             Billing?
   webhookLogs         WebhookLog[]
-  inviteTokens        InviteToken[]
+  teamInvites         TeamInvite[]
 
   @@map("workspaces")
 }
@@ -129,6 +103,7 @@ model Assistant {
   businessHours Json?
   fallbackRule    String          @default("voicemail")
   vapiAssistantId String?
+  toolsConfig     Json?
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
 
@@ -171,10 +146,12 @@ model Call {
   costBreakdownJson Json?
   recordingUrl      String?
   transcriptText    String?
-  providerCallId    String?
+  providerCallId    String?   @unique
   tags              String[]  @default([])
   intent            String?
   bookingStatus     String?
+  bookingDate       DateTime?
+  customerName      String?
   createdAt         DateTime  @default(now())
 
   workspace Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
@@ -184,16 +161,18 @@ model Call {
 }
 
 model CalendarConnection {
-  id           String   @id @default(cuid())
-  workspaceId  String
-  provider     String   @default("GOOGLE")
-  accessToken  String
-  refreshToken String?
-  calendarId   String?
-  connectedAt  DateTime @default(now())
+  id             String    @id @default(cuid())
+  workspaceId    String
+  provider       String    @default("GOOGLE")
+  accessToken    String
+  refreshToken   String?
+  calendarId     String?
+  tokenExpiresAt DateTime?
+  connectedAt    DateTime  @default(now())
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
+  @@unique([workspaceId, provider])
   @@map("calendar_connections")
 }
 
@@ -208,6 +187,34 @@ model Billing {
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@map("billing")
+}
+
+model TeamInvite {
+  id          String     @id @default(cuid())
+  workspaceId String
+  email       String
+  role        MemberRole @default(MEMBER)
+  token       String     @unique
+  invitedById String
+  expiresAt   DateTime
+  createdAt   DateTime   @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, email])
+  @@map("team_invites")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("password_reset_tokens")
 }
 
 model WebhookLog {

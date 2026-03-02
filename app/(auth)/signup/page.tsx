@@ -1,13 +1,14 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { Loader2, Mic } from "lucide-react";
 
-export default function SignupPage() {
+function SignupForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [form, setForm] = useState({
@@ -48,7 +49,8 @@ export default function SignupPage() {
         redirect: false,
       });
 
-      router.push("/app");
+      const callbackUrl = searchParams.get("callbackUrl");
+      router.push(callbackUrl ?? "/app");
       router.refresh();
     } catch {
       setError("Netzwerkfehler. Bitte versuche es erneut.");
@@ -121,5 +123,13 @@ export default function SignupPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense fallback={null}>
+      <SignupForm />
+    </Suspense>
   );
 }

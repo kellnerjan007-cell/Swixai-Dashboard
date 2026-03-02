@@ -16,6 +16,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { timingSafeEqual } from "crypto";
 import { db } from "@/lib/db";
 
 // ─── Vapi Payload Types ────────────────────────────────────────────────────────
@@ -69,6 +70,27 @@ async function findAssistantByVapiId(vapiAssistantId: string) {
 // ─── Handler ──────────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
+  // ── Signature verification ──────────────────────────────────────────────────
+  // Vapi sends the Server Secret (configured in Vapi Dashboard → Settings →
+  // Webhooks → Server Secret) as the Authorization header: "Bearer <secret>".
+  // Set VAPI_WEBHOOK_SECRET in your env to enable verification.
+  const webhookSecret = process.env.VAPI_WEBHOOK_SECRET;
+  if (webhookSecret) {
+    const authHeader = req.headers.get("authorization") ?? "";
+    const expected = `Bearer ${webhookSecret}`;
+    let valid = false;
+    try {
+      const a = Buffer.from(authHeader);
+      const b = Buffer.from(expected);
+      valid = a.length === b.length && timingSafeEqual(a, b);
+    } catch {
+      valid = false;
+    }
+    if (!valid) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+  }
+
   let body: VapiPayload;
 
   try {
@@ -112,19 +134,42 @@ export async function POST(req: NextRequest) {
   try {
     // ── call-started ─────────────────────────────────────────────────────────
     if (message.type === "call-started" && vapiCallId && workspaceId) {
-      const existing = await db.call.findFirst({ where: { providerCallId: vapiCallId } });
-      if (!existing) {
-        await db.call.create({
-          data: {
+      // Block call if workspace has no credits
+      const billing = await db.billing.findUnique({ where: { workspaceId } });
+      if (billing && billing.creditsBalance <= 0) {
+        // End the call immediately via Vapi API
+        await fetch(`https://api.vapi.ai/call/${vapiCallId}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${process.env.VAPI_API_KEY}` },
+        });
+        await db.call.upsert({
+          where: { providerCallId: vapiCallId },
+          update: { outcome: "blocked-no-credits" },
+          create: {
             workspaceId,
             assistantId,
             providerCallId: vapiCallId,
             startedAt: call?.startedAt ? new Date(call.startedAt) : new Date(),
             fromNumber: call?.customer?.number,
             toNumber: call?.phoneNumber?.number,
-            outcome: "in-progress",
+            outcome: "blocked-no-credits",
           },
         });
+      } else {
+        const existing = await db.call.findFirst({ where: { providerCallId: vapiCallId } });
+        if (!existing) {
+          await db.call.create({
+            data: {
+              workspaceId,
+              assistantId,
+              providerCallId: vapiCallId,
+              startedAt: call?.startedAt ? new Date(call.startedAt) : new Date(),
+              fromNumber: call?.customer?.number,
+              toNumber: call?.phoneNumber?.number,
+              outcome: "in-progress",
+            },
+          });
+        }
       }
     }
 
@@ -134,6 +179,17 @@ export async function POST(req: NextRequest) {
       const durationSec = message.durationSeconds
         ? Math.round(message.durationSeconds)
         : undefined;
+
+      // Extract intent & booking status from Vapi analysis
+      const structured = message.analysis?.structuredData as Record<string, unknown> | undefined;
+      const intent = (structured?.intent as string | undefined) ?? null;
+      const successEval = message.analysis?.successEvaluation;
+      const bookingStatus =
+        (structured?.bookingStatus as string | undefined) ??
+        (successEval === "true" || successEval === "1" ? "booked" : null);
+      const customerName = (structured?.customerName as string | undefined) ?? null;
+      const bookingDateRaw = structured?.bookingDate as string | undefined;
+      const bookingDate = bookingDateRaw ? new Date(bookingDateRaw) : null;
 
       const callData = {
         workspaceId,
@@ -149,6 +205,10 @@ export async function POST(req: NextRequest) {
         costBreakdownJson: (message.costs ?? call?.costs ?? null) as Parameters<typeof db.call.create>[0]["data"]["costBreakdownJson"],
         recordingUrl: message.recordingUrl ?? message.stereoRecordingUrl,
         transcriptText: message.transcript,
+        intent,
+        bookingStatus,
+        customerName,
+        bookingDate,
       };
 
       const existing = await db.call.findFirst({ where: { providerCallId: vapiCallId } });
@@ -158,7 +218,7 @@ export async function POST(req: NextRequest) {
         await db.call.create({ data: callData });
       }
 
-      // Deduct credits from workspace billing
+      // Deduct credits from workspace billing (floor at 0 to prevent negative balance)
       if (costTotal && workspaceId) {
         await db.billing.upsert({
           where: { workspaceId },
@@ -168,11 +228,17 @@ export async function POST(req: NextRequest) {
           },
           create: {
             workspaceId,
-            creditsBalance: -costTotal,
+            creditsBalance: 0,
             totalSpent: costTotal,
             currency: "EUR",
           },
         });
+        // Ensure balance never goes negative (single-query clamp)
+        await db.$executeRaw`
+          UPDATE billing
+          SET "creditsBalance" = GREATEST(0, "creditsBalance")
+          WHERE "workspaceId" = ${workspaceId}
+        `;
       }
     }
 

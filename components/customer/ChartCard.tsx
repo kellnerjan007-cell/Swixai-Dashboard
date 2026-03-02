@@ -58,9 +58,9 @@ export function ChartCard({
   }) => {
     if (!active || !payload?.length) return null;
     return (
-      <div className="bg-white border border-gray-200 rounded-xl px-3 py-2 shadow-lg text-sm">
-        <p className="text-gray-500 text-xs mb-0.5">{label}</p>
-        <p className="font-semibold text-gray-900">
+      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 shadow-lg text-sm">
+        <p className="text-gray-500 dark:text-gray-400 text-xs mb-0.5">{label}</p>
+        <p className="font-semibold text-gray-900 dark:text-gray-100">
           {applyFormat(payload[0].value, format)}
         </p>
       </div>
@@ -71,8 +71,8 @@ export function ChartCard({
     <Card>
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h2 className="text-base font-semibold text-gray-900">{title}</h2>
-          {subtitle && <p className="text-sm text-gray-500 mt-0.5">{subtitle}</p>}
+          <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">{title}</h2>
+          {subtitle && <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{subtitle}</p>}
         </div>
       </div>
 

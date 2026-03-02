@@ -1,72 +1,93 @@
+/**
+ * POST /api/team/invite  → Send a team invite by email
+ * DELETE /api/team/invite?id=  → Cancel a pending invite
+ */
+
 import { NextRequest, NextResponse } from "next/server";
-import crypto from "crypto";
+import { randomBytes } from "crypto";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { requireAuth, getCurrentWorkspace } from "@/lib/session";
-import { sendInviteEmail } from "@/lib/email";
+import { getUserWorkspace } from "@/lib/workspace";
+import { sendTeamInviteEmail } from "@/lib/email";
 
 export async function POST(req: NextRequest) {
-  let session;
-  try {
-    session = await requireAuth();
-  } catch {
-    return NextResponse.json({ error: "Nicht angemeldet." }, { status: 401 });
-  }
+  const session = await getServerSession(authOptions);
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { email, role } = await req.json();
+  const workspace = await getUserWorkspace(session.user.id);
+  if (!workspace) return NextResponse.json({ error: "No workspace" }, { status: 400 });
 
-  if (!email || typeof email !== "string") {
-    return NextResponse.json({ error: "E-Mail erforderlich." }, { status: 400 });
-  }
-
-  const workspace = await getCurrentWorkspace(session.user.id);
-  if (!workspace) {
-    return NextResponse.json({ error: "Kein Workspace gefunden." }, { status: 404 });
-  }
-
-  // Prüfen ob der einladende Nutzer OWNER oder ADMIN ist
-  const membership = await db.membership.findUnique({
+  // Only OWNER or ADMIN can invite
+  const myMembership = await db.membership.findUnique({
     where: { userId_workspaceId: { userId: session.user.id, workspaceId: workspace.id } },
   });
-  if (!membership || (membership.role !== "OWNER" && membership.role !== "ADMIN")) {
-    return NextResponse.json({ error: "Keine Berechtigung." }, { status: 403 });
+  if (!myMembership || myMembership.role === "MEMBER") {
+    return NextResponse.json({ error: "Keine Berechtigung zum Einladen" }, { status: 403 });
   }
 
-  // Prüfen ob Nutzer bereits Mitglied ist
-  const existingUser = await db.user.findUnique({ where: { email: email.toLowerCase() } });
-  if (existingUser) {
-    const existingMembership = await db.membership.findUnique({
-      where: { userId_workspaceId: { userId: existingUser.id, workspaceId: workspace.id } },
-    });
-    if (existingMembership) {
-      return NextResponse.json({ error: "Diese Person ist bereits Mitglied." }, { status: 409 });
-    }
+  const { email, role = "MEMBER" } = await req.json() as { email?: string; role?: string };
+  if (!email || typeof email !== "string") {
+    return NextResponse.json({ error: "E-Mail fehlt" }, { status: 400 });
   }
+  const normalizedEmail = email.trim().toLowerCase();
 
-  // Alten Invite-Token löschen
-  await db.inviteToken.deleteMany({
-    where: { workspaceId: workspace.id, email: email.toLowerCase() },
+  // Check if already a member
+  const existingMember = await db.membership.findFirst({
+    where: { workspaceId: workspace.id, user: { email: normalizedEmail } },
   });
+  if (existingMember) {
+    return NextResponse.json({ error: "Diese Person ist bereits Mitglied" }, { status: 409 });
+  }
 
-  const token = crypto.randomBytes(32).toString("hex");
-  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 Tage
+  const token = randomBytes(32).toString("hex");
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
-  await db.inviteToken.create({
-    data: {
+  await db.teamInvite.upsert({
+    where: { workspaceId_email: { workspaceId: workspace.id, email: normalizedEmail } },
+    update: { token, expiresAt, role: role as "OWNER" | "ADMIN" | "MEMBER", invitedById: session.user.id },
+    create: {
       workspaceId: workspace.id,
-      email: email.toLowerCase(),
+      email: normalizedEmail,
+      role: role as "OWNER" | "ADMIN" | "MEMBER",
       token,
-      role: role ?? "MEMBER",
       invitedById: session.user.id,
       expiresAt,
     },
   });
 
-  await sendInviteEmail(
-    email,
-    token,
-    workspace.name,
-    session.user.name ?? session.user.email ?? "Jemand"
-  );
+  const baseUrl = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
+  const inviteUrl = `${baseUrl}/join?token=${token}`;
 
-  return NextResponse.json({ ok: true });
+  try {
+    await sendTeamInviteEmail(
+      normalizedEmail,
+      session.user.name ?? session.user.email ?? "Jemand",
+      workspace.name,
+      inviteUrl
+    );
+  } catch (err) {
+    console.error("[TEAM INVITE] Email send failed:", err);
+    // Don't fail the request — invite is created, email just didn't send
+  }
+
+  return NextResponse.json({ success: true });
+}
+
+export async function DELETE(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const workspace = await getUserWorkspace(session.user.id);
+  if (!workspace) return NextResponse.json({ error: "No workspace" }, { status: 400 });
+
+  const { searchParams } = new URL(req.url);
+  const inviteId = searchParams.get("id");
+  if (!inviteId) return NextResponse.json({ error: "id fehlt" }, { status: 400 });
+
+  await db.teamInvite.deleteMany({
+    where: { id: inviteId, workspaceId: workspace.id },
+  });
+
+  return NextResponse.json({ success: true });
 }

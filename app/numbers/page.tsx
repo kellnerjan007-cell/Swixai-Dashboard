@@ -1,3 +1,2 @@
-export default function Page() {
-  return <h1 className="text-3xl font-bold text-black">Telefonnummern</h1>;
-}
+import { redirect } from "next/navigation";
+export default function Page() { redirect("/app/numbers"); }

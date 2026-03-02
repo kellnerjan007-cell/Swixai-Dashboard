@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Loader2, Mic, CheckCircle } from "lucide-react";
+import { Loader2, Mic } from "lucide-react";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -16,14 +16,19 @@ export default function ForgotPasswordPage() {
     setError("");
 
     try {
-      await fetch("/api/auth/forgot-password", {
+      const res = await fetch("/api/auth/forgot-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
-      setSent(true);
+      const data = await res.json();
+      if (data.success) {
+        setSent(true);
+      } else {
+        setError(data.error ?? "Fehler – bitte erneut versuchen");
+      }
     } catch {
-      setError("Netzwerkfehler. Bitte versuche es erneut.");
+      setError("Netzwerkfehler – bitte erneut versuchen");
     } finally {
       setLoading(false);
     }
@@ -41,15 +46,20 @@ export default function ForgotPasswordPage() {
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
           {sent ? (
-            <div className="text-center py-4">
-              <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-4" />
-              <h1 className="text-xl font-bold text-gray-900 mb-2">E-Mail gesendet</h1>
+            <div className="text-center space-y-4">
+              <div className="w-12 h-12 bg-green-50 rounded-full flex items-center justify-center mx-auto">
+                <svg className="w-6 h-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <h1 className="text-xl font-bold text-gray-900">E-Mail gesendet</h1>
               <p className="text-gray-500 text-sm">
-                Falls ein Konto mit <strong>{email}</strong> existiert, erhältst du in Kürze eine E-Mail mit einem Link zum Zurücksetzen deines Passworts.
+                Falls ein Konto mit dieser E-Mail existiert, haben wir dir einen Reset-Link geschickt.
+                Bitte überprüfe auch deinen Spam-Ordner.
               </p>
               <Link
                 href="/login"
-                className="inline-block mt-6 text-sm text-black font-semibold hover:underline"
+                className="inline-block text-sm font-semibold text-black hover:underline mt-2"
               >
                 Zurück zum Login
               </Link>
@@ -58,7 +68,7 @@ export default function ForgotPasswordPage() {
             <>
               <h1 className="text-2xl font-bold text-gray-900 mb-2">Passwort vergessen?</h1>
               <p className="text-gray-500 text-sm mb-6">
-                Gib deine E-Mail-Adresse ein und wir senden dir einen Link zum Zurücksetzen.
+                Gib deine E-Mail-Adresse ein und wir schicken dir einen Reset-Link.
               </p>
 
               <form onSubmit={handleSubmit} className="space-y-4">
@@ -88,7 +98,7 @@ export default function ForgotPasswordPage() {
                   className="w-full bg-black text-white py-2.5 rounded-xl font-semibold hover:bg-gray-800 transition disabled:opacity-60 flex items-center justify-center gap-2"
                 >
                   {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-                  Link senden
+                  Reset-Link senden
                 </button>
               </form>
 

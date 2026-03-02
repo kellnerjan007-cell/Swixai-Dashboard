@@ -2,23 +2,26 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { getUserWorkspace } from "@/lib/workspace";
+import { getOrCreateWorkspace } from "@/lib/workspace";
 import { assistantSchema } from "@/lib/validations";
 import { updateVapiAssistant, deleteVapiAssistant } from "@/lib/vapi";
+import type { ToolsConfig } from "@/lib/vapi";
+import { decryptIfEncrypted } from "@/lib/crypto";
 
 async function getAssistantWithAuth(
   assistantId: string,
   userId: string
-): Promise<{ ok: boolean; assistant?: Awaited<ReturnType<typeof db.assistant.findFirst>>; error?: string; status?: number }> {
-  const workspace = await getUserWorkspace(userId);
-  if (!workspace) return { ok: false, error: "No workspace", status: 400 };
+): Promise<{ ok: boolean; assistant?: Awaited<ReturnType<typeof db.assistant.findFirst>>; vapiKey?: string | null; error?: string; status?: number }> {
+  const workspace = await getOrCreateWorkspace(userId);
+  if (!workspace) return { ok: false, error: "Kein Benutzer gefunden", status: 400 };
 
   const assistant = await db.assistant.findFirst({
     where: { id: assistantId, workspaceId: workspace.id },
   });
   if (!assistant) return { ok: false, error: "Not found", status: 404 };
 
-  return { ok: true, assistant };
+  const vapiKey = (workspace.vapiApiKey ? decryptIfEncrypted(workspace.vapiApiKey) : null) || process.env.VAPI_API_KEY;
+  return { ok: true, assistant, vapiKey };
 }
 
 export async function GET(
@@ -43,7 +46,7 @@ export async function PATCH(
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { ok, assistant, error, status } = await getAssistantWithAuth(id, session.user.id);
+  const { ok, assistant, vapiKey, error, status } = await getAssistantWithAuth(id, session.user.id);
   if (!ok) return NextResponse.json({ error }, { status });
 
   const body = await req.json();
@@ -58,14 +61,15 @@ export async function PATCH(
   });
 
   // Sync update to Vapi
-  if (process.env.VAPI_API_KEY && assistant?.vapiAssistantId) {
+  if (vapiKey && assistant?.vapiAssistantId) {
     try {
       await updateVapiAssistant(assistant.vapiAssistantId, {
         name: updated.name,
         systemPrompt: updated.systemPrompt,
         voice: updated.voice,
         language: updated.language,
-      });
+        toolsConfig: updated.toolsConfig as ToolsConfig | null,
+      }, vapiKey);
     } catch (err) {
       console.error("[VAPI] Failed to update assistant in Vapi:", err);
     }
@@ -82,13 +86,13 @@ export async function DELETE(
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { ok, assistant, error, status } = await getAssistantWithAuth(id, session.user.id);
+  const { ok, assistant, vapiKey, error, status } = await getAssistantWithAuth(id, session.user.id);
   if (!ok) return NextResponse.json({ error }, { status });
 
   // Delete from Vapi first (before DB so we still have the vapiAssistantId)
-  if (process.env.VAPI_API_KEY && assistant?.vapiAssistantId) {
+  if (vapiKey && assistant?.vapiAssistantId) {
     try {
-      await deleteVapiAssistant(assistant.vapiAssistantId);
+      await deleteVapiAssistant(assistant.vapiAssistantId, vapiKey);
     } catch (err) {
       console.error("[VAPI] Failed to delete assistant in Vapi:", err);
     }
