@@ -4,7 +4,7 @@
  * Without the key, emails are logged to console (dev fallback).
  */
 
-const FROM = `SwixAI <${process.env.EMAIL_FROM ?? "office@swixai.info"}>`;
+const FROM = `SwixAI <${process.env.EMAIL_FROM ?? "onboarding@resend.dev"}>`;
 
 async function sendEmail({
   to,
