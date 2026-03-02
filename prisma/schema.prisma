@@ -49,9 +49,37 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  memberships Membership[]
+  memberships          Membership[]
+  passwordResetTokens  PasswordResetToken[]
 
   @@map("users")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("password_reset_tokens")
+}
+
+model InviteToken {
+  id          String     @id @default(cuid())
+  workspaceId String
+  email       String
+  token       String     @unique
+  role        MemberRole @default(MEMBER)
+  invitedById String?
+  expiresAt   DateTime
+  createdAt   DateTime   @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@map("team_invites")
 }
 
 model Workspace {
@@ -70,6 +98,7 @@ model Workspace {
   calendarConnections CalendarConnection[]
   billing             Billing?
   webhookLogs         WebhookLog[]
+  inviteTokens        InviteToken[]
 
   @@map("workspaces")
 }

@@ -69,10 +69,9 @@ export default function LoginPage() {
                 <label className="block text-sm font-medium text-gray-700">
                   Passwort
                 </label>
-                <span className="text-xs text-gray-400">
-                  {/* TODO: Passwort-Reset via E-Mail implementieren */}
+                <Link href="/forgot-password" className="text-xs text-gray-400 hover:text-black transition">
                   Passwort vergessen?
-                </span>
+                </Link>
               </div>
               <input
                 type="password"
