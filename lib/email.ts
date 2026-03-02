@@ -32,6 +32,7 @@ async function sendEmail({
 
   if (!res.ok) {
     const err = await res.text();
+    console.error("[EMAIL] Resend status:", res.status, res.statusText);
     console.error("[EMAIL] Resend error:", err);
     throw new Error("E-Mail konnte nicht gesendet werden");
   }
