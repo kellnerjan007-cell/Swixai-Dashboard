@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Token fehlt." }, { status: 400 });
   }
 
-  const invite = await db.inviteToken.findUnique({
+  const invite = await db.teamInvite.findUnique({
     where: { token },
     include: { workspace: true },
   });
@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Token fehlt." }, { status: 400 });
   }
 
-  const invite = await db.inviteToken.findUnique({
+  const invite = await db.teamInvite.findUnique({
     where: { token },
     include: { workspace: true },
   });
@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
     create: { userId: user.id, workspaceId: invite.workspaceId, role: invite.role },
   });
 
-  await db.inviteToken.delete({ where: { id: invite.id } });
+  await db.teamInvite.delete({ where: { id: invite.id } });
 
   return NextResponse.json({ ok: true, email: user.email });
 }
