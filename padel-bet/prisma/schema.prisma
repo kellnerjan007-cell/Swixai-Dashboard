@@ -1,0 +1,135 @@
+generator client {
+  provider        = "prisma-client-js"
+  output          = "../src/generated/prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id                  String    @id @default(cuid())
+  email               String    @unique
+  name                String?
+  password            String
+  coins               Int       @default(50)
+  loginStreak         Int       @default(0)
+  lastLoginDate       DateTime?
+  lastAdWatchDate     DateTime?
+  adsWatchedToday     Int       @default(0)
+  isAdmin             Boolean   @default(false)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  predictions      Prediction[]
+  coinTransactions CoinTransaction[]
+  purchases        Purchase[]
+
+  @@map("users")
+}
+
+model Match {
+  id          String      @id @default(cuid())
+  homePlayer  String
+  awayPlayer  String
+  tournament  String
+  matchType   MatchType   @default(NORMAL)
+  scheduledAt DateTime
+  status      MatchStatus @default(UPCOMING)
+  homeScore   Int?
+  awayScore   Int?
+  winner      String?
+  coinCost    Int         @default(10)
+  round       String?
+  venue       String?
+  createdAt   DateTime    @default(now())
+
+  predictions Prediction[]
+
+  @@map("matches")
+}
+
+model Prediction {
+  id               String           @id @default(cuid())
+  userId           String
+  matchId          String
+  predictedWinner  String
+  coinsSpent       Int
+  coinsEarned      Int              @default(0)
+  status           PredictionStatus @default(PENDING)
+  createdAt        DateTime         @default(now())
+  settledAt        DateTime?
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  match Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, matchId])
+  @@map("predictions")
+}
+
+model CoinTransaction {
+  id          String          @id @default(cuid())
+  userId      String
+  amount      Int
+  type        TransactionType
+  description String
+  createdAt   DateTime        @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("coin_transactions")
+}
+
+model Purchase {
+  id              String         @id @default(cuid())
+  userId          String
+  packageId       String
+  packageName     String
+  coinsGranted    Int
+  amountChf       Float
+  stripePaymentId String?
+  status          PurchaseStatus @default(PENDING)
+  createdAt       DateTime       @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("purchases")
+}
+
+enum MatchType {
+  NORMAL
+  TOP_MATCH
+  COMBO
+}
+
+enum MatchStatus {
+  UPCOMING
+  LIVE
+  FINISHED
+  CANCELLED
+}
+
+enum PredictionStatus {
+  PENDING
+  WON
+  LOST
+  REFUNDED
+}
+
+enum TransactionType {
+  SIGNUP_BONUS
+  DAILY_LOGIN
+  AD_REWARD
+  PREDICTION_SPEND
+  PREDICTION_WIN
+  PURCHASE
+  STATS_VIEW
+  DAILY_STATS_PASS
+}
+
+enum PurchaseStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
